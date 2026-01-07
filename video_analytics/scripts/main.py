@@ -3,8 +3,8 @@ import torch
 from datetime import datetime
 from ultralytics import YOLO
 
-from video_analytics.scripts.utils.color_utils import detect_color
-from video_analytics.scripts.utils.mongo_utils import save_event
+from utils.color_utils import detect_color
+from utils.mongo_utils import save_event
 
 # ---------------- CONFIG ---------------- #
 VIDEO_PATH = "../videos/input2.mp4"
