@@ -7,7 +7,7 @@ from utils.color_utils import detect_color
 from utils.mongo_utils import save_event
 
 # ---------------- CONFIG ---------------- #
-VIDEO_PATH = "../videos/input2.mp4"
+VIDEO_PATH = "../videos/input.mp4"
 EXIT_THRESHOLD_SECONDS = 2
 
 MODEL_NAME = "yolov8s.pt"   # better recall on CPU
@@ -34,6 +34,7 @@ print("Playing video — press 'q' to quit")
 
 # ---------------- MAIN LOOP --------------- #
 while cap.isOpened():
+    # def read(self, image: cv2.typing.MatLike | None = ...) -> tuple[bool, cv2.typing.MatLike]: 
     ret, frame = cap.read()
     if not ret:
         break
