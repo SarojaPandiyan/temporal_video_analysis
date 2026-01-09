@@ -1,5 +1,5 @@
-video_analytics\.venv
-video_analytics\scripts\yolov8s.pt
 *.pt
 __pycache__/
 *.pyc
+.venv
+.vscode
