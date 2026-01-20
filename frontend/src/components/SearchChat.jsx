@@ -13,7 +13,7 @@ const SearchChat = ({ onClose, isDark }) => {
       ${isDark ? "bg-black/60" : "bg-black/40"} backdrop-blur-sm`}
     >
       <div
-        className={`w-130 max-h-[70vh] rounded-xl shadow-xl overflow-hidden
+        className={`w-170 max-h-[100vh] rounded-xl shadow-xl overflow-hidden
         ${isDark ? "bg-[#2f2f2f] text-white" : "bg-white text-black"}`}
       >
         {/* Search bar */}
