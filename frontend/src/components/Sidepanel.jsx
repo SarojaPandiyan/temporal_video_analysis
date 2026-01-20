@@ -19,7 +19,7 @@ const SidePanel = ({ isDark, searchVisible }) => {
       <div className="flex flex-col gap-y-6 py-6">
         {/* Toggle Button */}
         <div
-          className="flex items-center gap-3 px-2 cursor-pointer "
+          className={`flex items-center gap-3 px-2 cursor-pointer ${isDark ? "bg-gray" : ""}`}
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <FiSidebar className="text-xl" />
@@ -44,7 +44,7 @@ const SidePanel = ({ isDark, searchVisible }) => {
       <div className="px-2 py-6">
         <div className="flex items-center gap-3 cursor-pointer transition-[width] duration-500 ease-in">
           <FiSettings className="text-xl" />
-          {isExpanded && <span className="text-sm font-medium text-wrap">Settings</span>}
+          {isExpanded && <span className="text-sm font-medium">Settings</span>}
         </div>
       </div>
     </div>
