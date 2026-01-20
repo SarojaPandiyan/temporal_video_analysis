@@ -19,50 +19,68 @@ export default function Signup() {
       return;
     }
 
-    console.log({name,username,password,});
+    console.log({ name, username, password });
   };
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/60">
-
       {/* Card */}
-      <form onSubmit={handleSubmit} className="w-[90%] max-w-md rounded-xl bg-[#1f1f1f] p-6 text-white">
-        
+      <form
+        onSubmit={handleSubmit}
+        className="w-[90%] max-w-md rounded-xl bg-[#1f1f1f] p-6 text-white"
+      >
         {/* Title */}
         <h2 className="mb-6 text-lg font-semibold"> Create account </h2>
 
         {/* Display Name */}
         <div className="mb-4">
-          
-          <label className="mb-2 block text-sm text-gray-400"> Display name</label>
-          <input type="text" value={name}
+          <label className="mb-2 block text-sm text-gray-400">
+            {" "}
+            Display name
+          </label>
+          <input
+            type="text"
+            value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-[#333] bg-[#2a2a2a] px-4 py-2 outline-none focus:border-gray-500"/>
-        
+            className="w-full rounded-lg border border-[#333] bg-[#2a2a2a] px-4 py-2 outline-none focus:border-gray-500"
+          />
         </div>
 
         {/* Username */}
         <div className="mb-4">
-          <label className="mb-2 block text-sm text-gray-400">Username or Email</label>
-          <input type="text" value={username}
+          <label className="mb-2 block text-sm text-gray-400">
+            Username or Email
+          </label>
+          <input
+            type="text"
+            value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full rounded-lg border border-[#333] bg-[#2a2a2a] px-4 py-2 outline-none focus:border-gray-500"/>
+            className="w-full rounded-lg border border-[#333] bg-[#2a2a2a] px-4 py-2 outline-none focus:border-gray-500"
+          />
         </div>
 
         {/* Password */}
         <div className="mb-4">
           <label className="mb-2 block text-sm text-gray-400">Password</label>
-          <input type="password" value={password}
+          <input
+            type="password"
+            value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-[#333] bg-[#2a2a2a] px-4 py-2 outline-none focus:border-gray-500"/>
+            className="w-full rounded-lg border border-[#333] bg-[#2a2a2a] px-4 py-2 outline-none focus:border-gray-500"
+          />
         </div>
 
         {/* Confirm Password */}
         <div className="mb-6">
-          <label className="mb-2 block text-sm text-gray-400">Confirm password</label>
-          <input type="password" value={confirmPassword}
+          <label className="mb-2 block text-sm text-gray-400">
+            Confirm password
+          </label>
+          <input
+            type="password"
+            value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full rounded-lg border border-[#333] bg-[#2a2a2a] px-4 py-2 outline-none focus:border-gray-500"/>
+            className="w-full rounded-lg border border-[#333] bg-[#2a2a2a] px-4 py-2 outline-none focus:border-gray-500"
+          />
         </div>
 
         {/* Buttons */}

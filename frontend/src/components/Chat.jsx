@@ -1,6 +1,6 @@
 import { FaSearch } from "react-icons/fa";
 import { FiSend } from "react-icons/fi";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Navbar from "./Navbar";
 import SidePanel from "./Sidepanel";
 import EditProfile from "./EditProfile";
@@ -8,13 +8,11 @@ import SearchChat from "./SearchChat";
 
 // Get System preferred theme
 const getSystemPreferenceTheme = () => {
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      return isDarkMode ? true : false;
-    }
-    // Default to 'light' if not in a browser environment or matchMedia is unsupported
-    return false;
-  };
+  if (typeof window !== "undefined" && window.matchMedia) {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  return false;
+};
 
 const Chat = () => {
   const [profileVisible, setProfileVisible] = useState(false);
@@ -24,99 +22,94 @@ const Chat = () => {
   const [messages, setMessages] = useState([]);
 
   const inputRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
   const themeBg = isDark ? "bg-black text-white" : "bg-white text-black";
 
-  {/* Function ti handle input send*/}
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const handleSend = () => {
     if (!query.trim()) return;
-    console.log("Send:", query);
-    setMessages((prev) => [
-      ...prev,
-      { time: Date.now(), message: query }
-    ]);
+
+    const newMsg = { time: Date.now(), message: query.trim() };
+    setMessages((prev) => [...prev, newMsg]);
+
     setQuery("");
-    inputRef.current?.focus();
+    if (inputRef.current) {
+      inputRef.current.style.height = "auto";
+      inputRef.current.focus();
+    }
   };
 
   return !profileVisible ? (
     <div className={`h-screen grid grid-cols-[auto_1fr] ${themeBg}`}>
-      <SidePanel
-        isDark={isDark}
-        searchVisible={() => setSearchVisible(true)}
-      />
+      <SidePanel isDark={isDark} searchVisible={() => setSearchVisible(true)} />
 
       {searchVisible && (
-        <SearchChat
-          isDark={isDark}
-          onClose={() => setSearchVisible(false)}
-        />
+        <SearchChat isDark={isDark} onClose={() => setSearchVisible(false)} />
       )}
 
-      <div className="flex flex-col">
+      <div className="flex flex-col h-screen">
         <Navbar
           onProfileClick={() => setProfileVisible(true)}
           onThemeToggle={() => setIsDark(!isDark)}
           isDark={isDark}
         />
 
-        {/* Main Chat */}
-        <div
-          className={`flex flex-1 justify-center transition-all duration-500
-            ${messages.length === 0 ? "items-start pt-40" : "items-end pb-6"}
-          `}
-        >
-
-          <div
-            className={`flex flex-col gap-6 transition-all duration-500 items-center
-              ${messages.length === 0
-                ? "w-2xl"
-                : "w-full max-w-5xl"}
-            `}
-          >
+        {/* Main content – always full height, flex column */}
+        <div className="flex-1 flex flex-col min-h-0">
+          {/* Messages area – grows and scrolls */}
+          <div className="flex-1 overflow-y-auto px-4 pt-6 pb-2">
             {messages.length === 0 ? (
-              <div className="text-3xl font-semibold text-center">
-                What's on your camera today? Let's find !!!
+              <div className="h-full flex items-center justify-center">
+                <div className="text-3xl font-semibold text-center opacity-80">
+                  What's on your camera today? Let's find !!!
+                </div>
               </div>
-              ) : (
-              <div className="w-full flex flex-col gap-3 px-4 max-h-[70vh] overflow-y-auto">
+            ) : (
+              <div className="flex flex-col gap-4 max-w-5xl mx-auto">
                 {messages.map((msg, index) => (
                   <div
-                    key={msg.time || index}
-                    className={`self-end px-4 py-2 rounded-xl max-w-md
-                      ${isDark ? "bg-[#2f2f2f] text-white" : "bg-gray-200 text-black"}
+                    key={msg.time}
+                    className={`self-end px-4 py-2.5 rounded-2xl max-w-[80%] md:max-w-2xl
+                      ${isDark ? "bg-neutral-800 text-white" : "bg-gray-200 text-black"}
                     `}
                   >
                     {msg.message}
                   </div>
                 ))}
+                <div ref={messagesEndRef} />
               </div>
             )}
+          </div>
 
-            {/* Search Input */}
-            <div className={`${messages.length === 0 ? "w-2xl" : "w-4xl"} transition-[width] duration-200 ease-linear relative`}>
-              {query ? (
+          {/* Input area – always at bottom, fixed width behavior */}
+          <div className="sticky bottom-0 px-4 pb-6 pt-2 bg-inherit z-10">
+            <div className="max-w-5xl mx-auto relative">
+              {query.trim() ? (
                 <FiSend
-                  className="text-3xl absolute right-4 bottom-0.5 pr-2 -translate-y-1/2 text-gray-500 cursor-pointer"
+                  className="absolute right-5 bottom-3 text-2xl text-gray-400 hover:text-gray-200 cursor-pointer transition-colors"
                   onClick={handleSend}
                 />
               ) : (
-                <FaSearch className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
+                <FaSearch className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 text-xl pointer-events-none" />
               )}
+
               <textarea
                 ref={inputRef}
                 value={query}
-                placeholder="Query your video recordings..."
-                rows={1}
                 onChange={(e) => {
                   setQuery(e.target.value);
-
-                  // Reset height
                   e.target.style.height = "auto";
-
-                  const maxHeight = 160;
-
-                  if (e.target.scrollHeight > maxHeight) {
-                    e.target.style.height = `${maxHeight}px`;
+                  const maxH = 160;
+                  if (e.target.scrollHeight > maxH) {
+                    e.target.style.height = `${maxH}px`;
                     e.target.style.overflowY = "auto";
                   } else {
                     e.target.style.height = `${e.target.scrollHeight}px`;
@@ -127,31 +120,27 @@ const Chat = () => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
                     handleSend();
-                    e.target.style.height = "auto";
-                    e.target.style.overflowY = "hidden";
                   }
                 }}
-                className={`w-full resize-none px-4 py-3 pr-12 rounded-xl border
+                placeholder="Query your video recordings..."
+                rows={1}
+                className={`w-full resize-none px-5 py-3 pr-14 rounded-2xl border transition-all
                   ${
                     isDark
-                      ? "bg-[#1f1f1f] border-[#333] text-white"
-                      : "bg-white border-gray-300"
+                      ? "bg-neutral-900 border-neutral-700 text-white placeholder:text-neutral-500"
+                      : "bg-white border-gray-300 text-black placeholder:text-gray-400"
                   }
-                  max-h-40
-                  focus:outline-none focus:ring-2 focus:ring-gray-500
+                  focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500
+                  max-h-40 text-base md:text-lg
                 `}
               />
-
             </div>
           </div>
         </div>
       </div>
     </div>
   ) : (
-    <EditProfile
-      onCancel={() => setProfileVisible(false)}
-      isDark={isDark}
-    />
+    <EditProfile onCancel={() => setProfileVisible(false)} isDark={isDark} />
   );
 };
 

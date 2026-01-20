@@ -5,45 +5,58 @@ import { FaSearch } from "react-icons/fa";
 
 const SidePanel = ({ isDark, searchVisible }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const bg = isDark ? "bg-neutral-950" : "bg-white";
+  const text = isDark ? "text-neutral-200" : "text-neutral-800";
+  const border = isDark ? "border-neutral-800" : "border-neutral-200";
+  const hover = isDark ? "hover:bg-neutral-900/60" : "hover:bg-neutral-100";
+
   return (
     <div
       className={`
-        h-screen flex flex-col justify-between
-        transition-[width] duration-500 ease-in
-        ${isExpanded ? "w-52" : "w-10"}
-        ${isDark ? "bg-black  text-white" : "bg-white text-black"}
-        border-gray-300 border-r
+        h-screen flex flex-col
+        transition-all duration-300 ease-in-out
+        ${isExpanded ? "w-64" : "w-16"}
+        ${bg} ${text} ${border} border-r
       `}
     >
-      {/* Top Section */}
-      <div className="flex flex-col gap-y-6 py-6">
-        {/* Toggle Button */}
+      <div className="flex-1 flex flex-col pt-4">
+        {/* Toggle */}
         <div
-          className={`flex items-center gap-3 px-2 cursor-pointer ${isDark ? "bg-gray" : ""}`}
+          className={`flex items-center gap-3 px-4 py-3 cursor-pointer ${hover} transition-colors`}
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <FiSidebar className="text-xl" />
+          <FiSidebar className="shrink-0" />
           {isExpanded && <span className="text-sm font-semibold">Menu</span>}
         </div>
 
-        {/* Menu Items */}
-        <div className="flex flex-col gap-4 px-2">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={searchVisible}>
-            <FaSearch className="text-xl"/>
+        {/* Menu items */}
+        <div className="mt-6 flex flex-col gap-1">
+          <div
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer ${hover} transition-colors`}
+            onClick={searchVisible}
+          >
+            <FaSearch className="shrink-0" />
             {isExpanded && <span className="text-sm font-medium">Search</span>}
           </div>
 
-          <div className="flex items-center gap-3 cursor-pointer">
-            <RiEdit2Line className="text-xl" />
-            {isExpanded && <span className="text-sm font-medium">New Chat</span>}
+          <div
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer ${hover} transition-colors`}
+          >
+            <RiEdit2Line className="shrink-0" />
+            {isExpanded && (
+              <span className="text-sm font-medium">New Chat</span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Bottom Section */}
-      <div className="px-2 py-6">
-        <div className="flex items-center gap-3 cursor-pointer transition-[width] duration-500 ease-in">
-          <FiSettings className="text-xl" />
+      {/* Bottom */}
+      <div className="px-3 pb-6">
+        <div
+          className={`flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer ${hover} transition-colors`}
+        >
+          <FiSettings className="shrink-0" />
           {isExpanded && <span className="text-sm font-medium">Settings</span>}
         </div>
       </div>

@@ -3,7 +3,7 @@ import Chat from "./components/Chat";
 import Login from "./pages/login";
 import Signup from "./pages/signup";
 function App() {
-  return( 
+  return (
     <div>
       <Chat />
     </div>
