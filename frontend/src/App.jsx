@@ -1,8 +1,7 @@
-import EditProfile from "./components/EditProfile";
-
-export default function App(){
-  return(
-    <div className = "flex h-screen items-center justify-center bg-black">
-    </div>
-  );
+import { useState } from "react";
+import Chat from "./components/Chat";
+function App() {
+  return <Chat />;
 }
+
+export default App;
