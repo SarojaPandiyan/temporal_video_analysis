@@ -9,6 +9,7 @@ export default function EditProfile({ onCancel, isDark }) {
       {/* Card */}
       <div className={`w-[90%] max-w-md rounded-xl ${isDark ? "text-white bg-[#1f1f1f]": "text-black bg-gray-200"} p-6}`}>
         <div className="my-5 mx-3">
+            
             {/* Title */}
             <h2 className="mt-6 ml-4 text-lg font-semibold"> Edit Profile </h2>
 
