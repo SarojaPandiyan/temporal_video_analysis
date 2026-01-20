@@ -6,20 +6,31 @@ import SidePanel from "./Sidepanel";
 import EditProfile from "./EditProfile";
 import SearchChat from "./SearchChat";
 
+// Get System preferred theme
+const getSystemPreferenceTheme = () => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      return isDarkMode ? true : false;
+    }
+    // Default to 'light' if not in a browser environment or matchMedia is unsupported
+    return false;
+  };
+
 const Chat = () => {
   const [profileVisible, setProfileVisible] = useState(false);
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(getSystemPreferenceTheme());
   const [searchVisible, setSearchVisible] = useState(false);
   const [query, setQuery] = useState("");
+  const [messages, setMessages] = useState([]);
 
   const inputRef = useRef(null);
-
   const themeBg = isDark ? "bg-black text-white" : "bg-white text-black";
 
   {/* Function ti handle input send*/}
   const handleSend = () => {
     if (!query.trim()) return;
     console.log("Send:", query);
+    setMessages(...messages, {"time": Date.now(), "message": query})
     setQuery("");
     inputRef.current?.focus();
   };
@@ -46,14 +57,19 @@ const Chat = () => {
         />
 
         {/* Main Chat */}
-        <div className="flex flex-1 mt-40 justify-center">
+        <div
+          className={`flex flex-1 justify-center transition-all duration-500
+            ${messages.length === 0 ? "items-start pt-40" : "items-end pb-6"}
+          `}
+        >
+
           <div className="flex flex-col items-center gap-6">
-            <div className="text-3xl font-semibold text-center">
+            {messages.length == 0 ? <div className="text-3xl font-semibold text-center">
               What's on your camera today? Let's find !!!
-            </div>
+            </div>: "" }
 
             {/* Search Input */}
-            <div className="w-2xl relative">
+            <div className={`w-2xl relative`}>
               {query ? (
                 <FiSend
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg cursor-pointer"
@@ -62,7 +78,6 @@ const Chat = () => {
               ) : (
                 <FaSearch className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
               )}
-
               <input
                 type="text"
                 placeholder="Query your video recordings..."
