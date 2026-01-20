@@ -3,9 +3,8 @@ import { FiSidebar, FiSettings } from "react-icons/fi";
 import { RiEdit2Line } from "react-icons/ri";
 import { FaSearch } from "react-icons/fa";
 
-const SidePanel = ({ isDark }) => {
+const SidePanel = ({ isDark, searchVisible }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-
   return (
     <div
       className={`
@@ -20,7 +19,7 @@ const SidePanel = ({ isDark }) => {
       <div className="flex flex-col gap-y-6 py-6">
         {/* Toggle Button */}
         <div
-          className="flex items-center gap-3 px-2 cursor-pointer transition-[width] duration-500 ease-in"
+          className="flex items-center gap-3 px-2 cursor-pointer "
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <FiSidebar className="text-xl" />
@@ -28,13 +27,13 @@ const SidePanel = ({ isDark }) => {
         </div>
 
         {/* Menu Items */}
-        <div className="flex flex-col gap-4 px-2 transition-[width] duration-500 ease-in">
-          <div className="flex items-center gap-3 cursor-pointer">
-            <FaSearch className="text-xl" />
+        <div className="flex flex-col gap-4 px-2">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={searchVisible}>
+            <FaSearch className="text-xl"/>
             {isExpanded && <span className="text-sm font-medium">Search</span>}
           </div>
 
-          <div className="flex items-center gap-3 cursor-pointer transition-[width] duration-500 ease-in">
+          <div className="flex items-center gap-3 cursor-pointer">
             <RiEdit2Line className="text-xl" />
             {isExpanded && <span className="text-sm font-medium">New Chat</span>}
           </div>
@@ -45,7 +44,7 @@ const SidePanel = ({ isDark }) => {
       <div className="px-2 py-6">
         <div className="flex items-center gap-3 cursor-pointer transition-[width] duration-500 ease-in">
           <FiSettings className="text-xl" />
-          {isExpanded && <span className="text-sm font-medium">Settings</span>}
+          {isExpanded && <span className="text-sm font-medium text-wrap">Settings</span>}
         </div>
       </div>
     </div>

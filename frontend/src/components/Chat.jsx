@@ -3,17 +3,19 @@ import { useState } from "react";
 import Navbar from "./Navbar";
 import SidePanel from "./Sidepanel";
 import EditProfile from "./EditProfile";
+import SearchChat from "./SearchChat";
 
 const Chat = () => {
   const [profileVisible, setProfileVisible] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [searchVisible, setSearchVisible] = useState(false);
 
   const themeBg = isDark ? "bg-black text-white" : "bg-white text-black";
 
   return !profileVisible ? (
     <div className={`h-screen grid grid-cols-[auto_1fr] ${themeBg}`}>
-      <SidePanel isDark={isDark} />
-
+      <SidePanel isDark={isDark} searchVisible={()=>setSearchVisible(true)}/>
+      {searchVisible && <SearchChat isDark={isDark} onClose={() => setSearchVisible(false)} />}
       <div className="flex flex-col">
         <Navbar
           onProfileClick={() => setProfileVisible(true)}
