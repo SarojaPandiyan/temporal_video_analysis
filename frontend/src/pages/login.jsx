@@ -1,8 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+
+  const navigate = useNavigate();
+  const {login}=useAuth();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -14,6 +19,9 @@ export default function Login() {
 
     console.log("Username:", username);
     console.log("Password:", password);
+    
+    login();
+    navigate("/chat");
   };
 
   return (
