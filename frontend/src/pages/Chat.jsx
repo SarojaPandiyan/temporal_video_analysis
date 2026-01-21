@@ -1,14 +1,15 @@
 import { FaSearch } from "react-icons/fa";
 import { FiSend } from "react-icons/fi";
 import { useState, useRef, useEffect } from "react";
-import Navbar from "./Navbar";
-import SidePanel from "./Sidepanel";
-import EditProfile from "./EditProfile";
-import SearchChat from "./SearchChat";
+import Navbar from "../components/Navbar";
+import SidePanel from "../components/Sidepanel";
+import EditProfile from "../components/EditProfile";
+import SearchChat from "../components/SearchChat";
 
 // Get System preferred theme
 const getSystemPreferenceTheme = () => {
   if (typeof window !== "undefined" && window.matchMedia) {
+    console.log(window.matchMedia("(prefers-color-scheme: dark)"))
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   }
   return false;
@@ -93,7 +94,7 @@ const Chat = () => {
             )}
           </div>
 
-          {/* Input area – always at bottom, fixed width behavior */}
+          {/* Input area */}
           <div className="sticky bottom-0 px-4 pb-6 pt-2 bg-inherit z-10">
             <div className="max-w-5xl mx-auto relative">
               {query.trim() ? (
