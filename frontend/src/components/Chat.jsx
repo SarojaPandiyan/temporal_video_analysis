@@ -65,7 +65,11 @@ const Chat = () => {
         {/* Main content – always full height, flex column */}
         <div className="flex-1 flex flex-col min-h-0">
           {/* Messages area – grows and scrolls */}
-          <div className="flex-1 overflow-y-auto px-4 pt-6 pb-2">
+          <div className="flex-1 overflow-y-auto px-4 pt-6 pb-2
+            [&::-webkit-scrollbar]:w-2 
+            [&::-webkit-scrollbar-thumb]:bg-gray-500 
+            [&::-webkit-scrollbar-track]:bg-gray-300 
+          ">
             {messages.length === 0 ? (
               <div className="h-full flex items-center justify-center">
                 <div className="text-3xl font-semibold text-center opacity-80">
