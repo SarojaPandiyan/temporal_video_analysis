@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom"; // ← assuming you're using React Router
 // If you're not, just use <a href="/"> instead
 
-export default function NotFound({ isDark }) { 
+export default function NotFound({ isDark }) {
   const theme = {
     bg: isDark ? "bg-gray-950" : "bg-gray-50",
     text: isDark ? "text-gray-100" : "text-gray-900",
@@ -46,7 +46,6 @@ export default function NotFound({ isDark }) {
           >
             ← Back to Home
           </Link>
-
         </div>
       </div>
     </main>

@@ -6,18 +6,9 @@ import SidePanel from "../components/Sidepanel";
 import EditProfile from "../components/EditProfile";
 import SearchChat from "../components/SearchChat";
 
-// Get System preferred theme
-const getSystemPreferenceTheme = () => {
-  if (typeof window !== "undefined" && window.matchMedia) {
-    console.log(window.matchMedia("(prefers-color-scheme: dark)"))
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
-  }
-  return false;
-};
-
-const Chat = () => {
+const Chat = ({ theme }) => {
   const [profileVisible, setProfileVisible] = useState(false);
-  const [isDark, setIsDark] = useState(getSystemPreferenceTheme());
+  const [isDark, setIsDark] = useState(theme);
   const [searchVisible, setSearchVisible] = useState(false);
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState([]);
@@ -66,11 +57,13 @@ const Chat = () => {
         {/* Main content – always full height, flex column */}
         <div className="flex-1 flex flex-col min-h-0">
           {/* Messages area – grows and scrolls */}
-          <div className="flex-1 overflow-y-auto px-4 pt-6 pb-2
+          <div
+            className="flex-1 overflow-y-auto px-4 pt-6 pb-2
             [&::-webkit-scrollbar]:w-2 
             [&::-webkit-scrollbar-thumb]:bg-gray-500 
             [&::-webkit-scrollbar-track]:bg-gray-300 
-          ">
+          "
+          >
             {messages.length === 0 ? (
               <div className="h-full flex items-center justify-center">
                 <div className="text-3xl font-semibold text-center opacity-80">
