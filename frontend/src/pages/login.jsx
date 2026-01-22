@@ -118,7 +118,7 @@ export default function Login({ isDark }) {
               border transition-colors duration-200
               ${theme.btnSecondary}
             `}
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate("/signup")}
             >
               Create Account
             </button>
