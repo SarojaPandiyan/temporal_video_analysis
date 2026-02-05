@@ -8,7 +8,7 @@ import SearchChat from "../components/SearchChat";
 
 const Chat = ({ theme }) => {
   const [profileVisible, setProfileVisible] = useState(false);
-  const [isDark, setIsDark] = useState(theme);
+  const [isDark, setIsDark] = useState(!theme);
   const [searchVisible, setSearchVisible] = useState(false);
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState([]);

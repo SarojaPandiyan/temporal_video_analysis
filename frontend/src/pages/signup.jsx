@@ -59,7 +59,7 @@ export default function Signup({ isDark }) {
         {" "}
         {/* ← increased z-index + better spacing */}
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-2xl text-black tracking-tight">
+          <span className={`ont-semibold text-2xl ${theme.text} tracking-tight`}>
             InsightSphere
           </span>
         </div>
