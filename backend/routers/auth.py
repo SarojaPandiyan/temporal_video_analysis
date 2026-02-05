@@ -1,12 +1,11 @@
 # app/routers/auth.py
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from datetime import datetime, timedelta
 
 from jose import jwt
 from backend.core.config import settings
-from backend.core.security import ALGORITHM
 
 from backend.core.security import get_password_hash, verify_password, create_access_token, create_refresh_token
 from backend.dependencies import get_current_user
@@ -18,7 +17,7 @@ limiter = Limiter(key_func=get_remote_address)   # global limiter instance (also
 
 @router.post("/signup", response_model=AuthResponse)
 @limiter.limit("5/minute")   # D: rate limiting
-async def signup(user_in: UserCreate):
+async def signup(request: Request, user_in: UserCreate):
     if await users_collection.find_one({"username": user_in.username}):
         raise HTTPException(status_code=400, detail="Username already registered. Please choose a different username.")  # B: clear message
 
@@ -57,8 +56,10 @@ async def signup(user_in: UserCreate):
 
 @router.post("/login", response_model=AuthResponse)
 @limiter.limit("5/minute")   # D: rate limiting
-async def login(user_in: UserLogin):
+async def login(request: Request, user_in: UserLogin):
     user_doc = await users_collection.find_one({"username": user_in.username})
+    # print(get_password_hash(user_in.password))
+    # print(user_doc['hashed_password'])
     if not user_doc or not verify_password(user_in.password, user_doc["hashed_password"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -92,7 +93,7 @@ async def login(user_in: UserLogin):
 @router.post("/refresh", response_model=AuthResponse)
 async def refresh_token(token_data: TokenRefresh):
     try:
-        payload = jwt.decode(token_data.refresh_token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token_data.refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         username = payload.get("sub")
         if payload.get("type") != "refresh" or not username:
             raise HTTPException(status_code=401, detail="Invalid refresh token.")
