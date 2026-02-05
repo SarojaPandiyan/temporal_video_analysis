@@ -1,8 +1,9 @@
-# app/routers/auth.py
+# backend/routers/auth.py
 from fastapi import APIRouter, HTTPException, status, Depends, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from datetime import datetime, timedelta
+from bson.objectid import ObjectId  # ← NEW import
 
 from jose import jwt
 from backend.core.config import settings
@@ -13,13 +14,13 @@ from backend.models.user import UserCreate, UserLogin, UserOut, AuthResponse, To
 from backend.db import users_collection, refresh_tokens_collection
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-limiter = Limiter(key_func=get_remote_address)   # global limiter instance (also set in main.py)
+limiter = Limiter(key_func=get_remote_address)
 
 @router.post("/signup", response_model=AuthResponse)
-@limiter.limit("5/minute")   # D: rate limiting
+@limiter.limit("5/minute")
 async def signup(request: Request, user_in: UserCreate):
     if await users_collection.find_one({"username": user_in.username}):
-        raise HTTPException(status_code=400, detail="Username already registered. Please choose a different username.")  # B: clear message
+        raise HTTPException(status_code=400, detail="Username already registered. Please choose a different username.")
 
     if await users_collection.find_one({"email": user_in.email}):
         raise HTTPException(status_code=400, detail="Email already registered.")
@@ -34,11 +35,13 @@ async def signup(request: Request, user_in: UserCreate):
     }
     result = await users_collection.insert_one(user_doc)
 
-    access_token = create_access_token(user_in.username)
-    refresh_token = create_refresh_token(user_in.username)
+    user_id = str(result.inserted_id)  # ← NEW: use ID for tokens
+
+    access_token = create_access_token(user_id)
+    refresh_token = create_refresh_token(user_id)
 
     await refresh_tokens_collection.insert_one({
-        "user_id": user_in.username,
+        "user_id": user_id,  # ← CHANGED: use ID instead of username
         "token": refresh_token,
         "expires_at": datetime.utcnow() + timedelta(days=7)
     })
@@ -47,7 +50,7 @@ async def signup(request: Request, user_in: UserCreate):
         access_token=access_token,
         refresh_token=refresh_token,
         user=UserOut(
-            id=str(result.inserted_id),
+            id=user_id,
             username=user_in.username,
             full_name=user_in.full_name,
             created_at=user_doc["created_at"]
@@ -55,26 +58,26 @@ async def signup(request: Request, user_in: UserCreate):
     )
 
 @router.post("/login", response_model=AuthResponse)
-@limiter.limit("5/minute")   # D: rate limiting
+@limiter.limit("5/minute")
 async def login(request: Request, user_in: UserLogin):
     user_doc = await users_collection.find_one({"username": user_in.username})
-    # print(get_password_hash(user_in.password))
-    # print(user_doc['hashed_password'])
     if not user_doc or not verify_password(user_in.password, user_doc["hashed_password"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password. Please try again.",  # B: helpful message
+            detail="Incorrect username or password. Please try again.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token = create_access_token(user_in.username)
-    refresh_token = create_refresh_token(user_in.username)
+    user_id = str(user_doc["_id"])  # ← NEW: use ID for tokens
 
-    # Rotate: delete old refresh tokens for this user (optional security)
-    await refresh_tokens_collection.delete_many({"user_id": user_in.username})
+    access_token = create_access_token(user_id)
+    refresh_token = create_refresh_token(user_id)
+
+    # Rotate: delete old refresh tokens for this user
+    await refresh_tokens_collection.delete_many({"user_id": user_id})  # ← CHANGED: use ID
 
     await refresh_tokens_collection.insert_one({
-        "user_id": user_in.username,
+        "user_id": user_id,  # ← CHANGED: use ID
         "token": refresh_token,
         "expires_at": datetime.utcnow() + timedelta(days=7)
     })
@@ -83,7 +86,7 @@ async def login(request: Request, user_in: UserLogin):
         access_token=access_token,
         refresh_token=refresh_token,
         user=UserOut(
-            id=str(user_doc["_id"]),
+            id=user_id,
             username=user_doc["username"],
             full_name=user_doc.get("full_name"),
             created_at=user_doc["created_at"]
@@ -94,8 +97,8 @@ async def login(request: Request, user_in: UserLogin):
 async def refresh_token(token_data: TokenRefresh):
     try:
         payload = jwt.decode(token_data.refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        username = payload.get("sub")
-        if payload.get("type") != "refresh" or not username:
+        user_id = payload.get("sub")  # ← CHANGED: sub is now ID
+        if payload.get("type") != "refresh" or not user_id:
             raise HTTPException(status_code=401, detail="Invalid refresh token.")
     except:
         raise HTTPException(status_code=401, detail="Invalid refresh token.")
@@ -110,22 +113,22 @@ async def refresh_token(token_data: TokenRefresh):
     # Rotate
     await refresh_tokens_collection.delete_one({"token": token_data.refresh_token})
 
-    access_token = create_access_token(username)
-    new_refresh = create_refresh_token(username)
+    access_token = create_access_token(user_id)
+    new_refresh = create_refresh_token(user_id)
 
     await refresh_tokens_collection.insert_one({
-        "user_id": username,
+        "user_id": user_id,  # ← CHANGED: use ID
         "token": new_refresh,
         "expires_at": datetime.utcnow() + timedelta(days=7)
     })
 
-    user_doc = await users_collection.find_one({"username": username})
+    user_doc = await users_collection.find_one({"_id": ObjectId(user_id)})  # ← CHANGED: lookup by ID
     return AuthResponse(
         access_token=access_token,
         refresh_token=new_refresh,
         user=UserOut(
-            id=str(user_doc["_id"]),
-            username=username,
+            id=user_id,
+            username=user_doc["username"],
             full_name=user_doc.get("full_name"),
             created_at=user_doc["created_at"]
         )

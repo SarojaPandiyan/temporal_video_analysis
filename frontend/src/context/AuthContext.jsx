@@ -96,6 +96,7 @@ export const AuthProvider = ({ children }) => {
 
     if (res.ok) {
       const data = await res.json();
+      console.log("Fetched user:", data);
       setUser(data);
       setIsAuthenticated(true);
     } else {
@@ -137,9 +138,11 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated,
         user,
         loading,
+        setUser,
         login,
         logout,
         refreshAccessToken,
+        getAccessToken,
       }}
     >
       {children}

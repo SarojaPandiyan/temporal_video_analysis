@@ -29,4 +29,8 @@ class Token(BaseModel):
 
 class AuthResponse(Token):              # ← updated to include refresh
     refresh_token: Optional[str] = None
-    user: UserOut
+    user: UserOut    
+
+class UserUpdate(BaseModel):
+    full_name: str | None = None
+    username: str | None = None

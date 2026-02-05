@@ -6,6 +6,8 @@ export default function Signup({ isDark }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -33,47 +35,129 @@ export default function Signup({ isDark }) {
     disabled: "opacity-40 cursor-not-allowed",
   };
 
-  const handleSubmit = (e) => {
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email.trim());
+  };
+
+  const validateUsername = (username) => {
+    const trimmed = username.trim();
+    const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
+    return usernameRegex.test(trimmed);
+  };
+
+  const validatePassword = (pwd) => {
+    // At least 8 chars, 1 uppercase, 1 lowercase, 1 number
+    const hasMinLength = pwd.length >= 8;
+    const hasUpper = /[A-Z]/.test(pwd);
+    const hasLower = /[a-z]/.test(pwd);
+    const hasNumber = /[0-9]/.test(pwd);
+    return hasMinLength && hasUpper && hasLower && hasNumber;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
-    if (!name || !email || !password || !confirmPassword) {
-      alert("Please fill all fields");
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const trimmedUsername = trimmedName; // using name as username for now
+
+    // 1. All fields required
+    if (!trimmedName || !trimmedEmail || !password || !confirmPassword) {
+      setError("Please fill all fields");
+      setLoading(false);
       return;
     }
 
+    // 2. Email format
+    if (!validateEmail(trimmedEmail)) {
+      setError("Please enter a valid email address");
+      setLoading(false);
+      return;
+    }
+
+    // 3. Username validation (if using name as username)
+    if (!validateUsername(trimmedUsername)) {
+      setError(
+        "Display name must be 3–20 characters and contain only letters, numbers, underscore or hyphen"
+      );
+      setLoading(false);
+      return;
+    }
+
+    // 4. Password strength
+    if (!validatePassword(password)) {
+      setError(
+        "Password must be at least 8 characters long and contain uppercase, lowercase, and a number"
+      );
+      setLoading(false);
+      return;
+    }
+
+    // 5. Password match
     if (password !== confirmPassword) {
-      alert("Passwords do not match");
+      setError("Passwords do not match");
+      setLoading(false);
       return;
     }
 
-    console.log({ name, email, password });
+    // ────────────────────────────────────────────────
+    // All client-side checks passed → send to backend
+    // ────────────────────────────────────────────────
 
-    // In real app → send to backend / auth here
-    // For now just redirect to login
-    navigate("/login");
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: trimmedUsername,
+          email: trimmedEmail,
+          full_name: trimmedName,
+          password: password,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(
+          errData.detail || "Signup failed. Please try again."
+        );
+      }
+
+      // Success
+      navigate("/login");
+
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <>
       <div className="fixed top-6 left-6 z-50">
-        {" "}
-        {/* ← increased z-index + better spacing */}
         <div className="flex items-center gap-2">
-          <span className={`ont-semibold text-2xl ${theme.text} tracking-tight`}>
+          <span className={`font-semibold text-2xl ${theme.text} tracking-tight`}>
             InsightSphere
           </span>
         </div>
       </div>
+
       <div
         className={`fixed inset-0 flex items-center justify-center ${theme.bg} ${theme.text} transition-colors duration-300`}
       >
         <form
           onSubmit={handleSubmit}
           className={`
-          w-[90%] max-w-md rounded-2xl p-8
-          ${theme.card}
-          transition-all duration-300
-        `}
+            w-[90%] max-w-md rounded-2xl p-8
+            ${theme.card}
+            transition-all duration-300
+          `}
         >
           <h2 className="mb-8 text-2xl font-bold tracking-tight">
             Create Account
@@ -90,14 +174,15 @@ export default function Signup({ isDark }) {
               onChange={(e) => setName(e.target.value)}
               placeholder="Your name"
               className={`
-              w-full rounded-lg px-4 py-3
-              border ${theme.inputBorder}
-              ${theme.inputBg} ${theme.inputText}
-              outline-none transition-all duration-200
-              ${theme.inputFocus}
-            `}
+                w-full rounded-lg px-4 py-3
+                border ${theme.inputBorder}
+                ${theme.inputBg} ${theme.inputText}
+                outline-none transition-all duration-200
+                ${theme.inputFocus}
+              `}
             />
           </div>
+
           {/* Email */}
           <div className="mb-6">
             <label className={`mb-2 block text-sm font-medium ${theme.label}`}>
@@ -109,12 +194,12 @@ export default function Signup({ isDark }) {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
               className={`
-              w-full rounded-lg px-4 py-3
-              border ${theme.inputBorder}
-              ${theme.inputBg} ${theme.inputText}
-              outline-none transition-all duration-200
-              ${theme.inputFocus}
-            `}
+                w-full rounded-lg px-4 py-3
+                border ${theme.inputBorder}
+                ${theme.inputBg} ${theme.inputText}
+                outline-none transition-all duration-200
+                ${theme.inputFocus}
+              `}
             />
           </div>
 
@@ -129,12 +214,12 @@ export default function Signup({ isDark }) {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               className={`
-              w-full rounded-lg px-4 py-3
-              border ${theme.inputBorder}
-              ${theme.inputBg} ${theme.inputText}
-              outline-none transition-all duration-200
-              ${theme.inputFocus}
-            `}
+                w-full rounded-lg px-4 py-3
+                border ${theme.inputBorder}
+                ${theme.inputBg} ${theme.inputText}
+                outline-none transition-all duration-200
+                ${theme.inputFocus}
+              `}
             />
           </div>
 
@@ -149,14 +234,21 @@ export default function Signup({ isDark }) {
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
               className={`
-              w-full rounded-lg px-4 py-3
-              border ${theme.inputBorder}
-              ${theme.inputBg} ${theme.inputText}
-              outline-none transition-all duration-200
-              ${theme.inputFocus}
-            `}
+                w-full rounded-lg px-4 py-3
+                border ${theme.inputBorder}
+                ${theme.inputBg} ${theme.inputText}
+                outline-none transition-all duration-200
+                ${theme.inputFocus}
+              `}
             />
           </div>
+
+          {/* Error message */}
+          {error && (
+            <div className="mb-6 text-red-500 text-sm text-center">
+              {error}
+            </div>
+          )}
 
           {/* Buttons */}
           <div className="flex flex-col sm:flex-row sm:justify-end gap-4">
@@ -164,25 +256,37 @@ export default function Signup({ isDark }) {
               type="button"
               onClick={() => navigate("/login")}
               className={`
-              px-6 py-2.5 text-sm font-medium rounded-full
-              border transition-colors duration-200
-              ${theme.btnSecondary}
-            `}
+                px-6 py-2.5 text-sm font-medium rounded-full
+                border transition-colors duration-200
+                ${theme.btnSecondary}
+              `}
+              disabled={loading}
             >
               Login
             </button>
 
             <button
               type="submit"
-              disabled={!name || !email || !password || !confirmPassword}
+              disabled={
+                loading ||
+                !name.trim() ||
+                !email.trim() ||
+                !password ||
+                !confirmPassword
+              }
               className={`
-              px-7 py-2.5 text-sm font-semibold rounded-full
-              transition-all duration-200
-              ${theme.btnPrimary}
-              ${!name || !email || !password || !confirmPassword ? theme.disabled : ""}
-            `}
+                px-7 py-2.5 text-sm font-semibold rounded-full
+                transition-all duration-200
+                ${theme.btnPrimary}
+                ${(loading ||
+                  !name.trim() ||
+                  !email.trim() ||
+                  !password ||
+                  !confirmPassword) &&
+                  theme.disabled}
+              `}
             >
-              Sign Up
+              {loading ? "Signing up..." : "Sign Up"}
             </button>
           </div>
 
