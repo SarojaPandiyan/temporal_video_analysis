@@ -1,8 +1,8 @@
-// routes/ProtectedRoute.jsx
+// routes/PublicRoute.jsx
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-export default function ProtectedRoute({ children }) {
+export default function PublicRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
@@ -13,8 +13,8 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+  if (isAuthenticated) {
+    return <Navigate to="/chat" replace />;
   }
 
   return children;

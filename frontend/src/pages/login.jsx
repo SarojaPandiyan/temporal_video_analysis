@@ -33,16 +33,20 @@ export default function Login({ isDark }) {
     disabled: "opacity-40 cursor-not-allowed",
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username || !password) {
       alert("Please fill in both fields");
       return;
     }
 
-    console.log("Login attempt →", { username, password });
-    login();
-    navigate("/chat");
+    try {
+      await login(username, password);   // ← now we wait
+      navigate("/chat");
+    } catch (err) {
+      console.error("Login failed:", err);
+      alert("Login failed: " + err.message);
+    }
   };
 
   return (
