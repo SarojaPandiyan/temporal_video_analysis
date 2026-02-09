@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     MONGODB_URL: str = os.getenv("MONGODB_URL")
     MONGODB_DB_NAME: str = os.getenv("MONGODB_DB_NAME")
     API_BASE_URL : str | None = os.getenv("API_BASE_URL")
+    GOOGLE_API_KEY: str | None = os.getenv("GOOGLE_API_KEY")
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
 settings = Settings()

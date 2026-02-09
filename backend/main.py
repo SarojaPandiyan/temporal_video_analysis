@@ -9,6 +9,7 @@ from slowapi import _rate_limit_exceeded_handler
 from backend.routers.auth import limiter, router
 from backend.routers import users
 from backend.db import client, refresh_tokens_collection
+from backend.routers import chat
 
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -36,6 +37,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # API routers
 app.include_router(router, prefix="/api")
 app.include_router(users.router, prefix="/api")
+app.include_router(chat.router, prefix="/api")
 
 # ---------------- Frontend ----------------
 
