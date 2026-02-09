@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaPhotoVideo } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 
@@ -6,7 +6,7 @@ const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export default function EditProfile({ onCancel, isDark }) {
-  const { user, setUser, logout, getAccessToken } = useAuth();
+  const { user, setUser, logout, getAccessToken, refreshUser } = useAuth();
 
   const [fullName, setFullName] = useState(user?.full_name || "");
   const [username, setUsername] = useState(user?.username || "");
@@ -15,7 +15,13 @@ export default function EditProfile({ onCancel, isDark }) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
+  useEffect(() => {
+  if (user) {
+    setFullName(user.full_name || "");
+    setUsername(user.username || "");
+    setPreviewUrl(user.profile_picture_url || "");
+  }
+}, [user]);
   const theme = {
     bg: isDark ? "bg-black" : "bg-white",
     card: isDark
@@ -61,6 +67,7 @@ export default function EditProfile({ onCancel, isDark }) {
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
   };
+  const displayProfileUrl = selectedFile ? previewUrl : (user?.profile_picture_url || previewUrl);
 
   const handleSave = async () => {
     setLoading(true);
@@ -81,7 +88,6 @@ export default function EditProfile({ onCancel, isDark }) {
     try {
       const requests = [];
 
-      // 1. Text profile update
       const profilePayload = {};
       if (fullName.trim() !== user?.full_name) profilePayload.full_name = fullName.trim();
       if (username.trim() !== user?.username) profilePayload.username = username.trim();
@@ -133,7 +139,8 @@ export default function EditProfile({ onCancel, isDark }) {
       // Merge real data from backend
       const updatedUser = results.reduce((acc, cur) => ({ ...acc, ...cur }), optimisticUser);
       setUser(updatedUser);
-
+      await refreshUser();
+      setPreviewUrl(user.profile_picture_url); // will be updated now
       onCancel(); // close modal
     } catch (err) {
       setUser(previousUser); // rollback
@@ -162,13 +169,19 @@ export default function EditProfile({ onCancel, isDark }) {
             ${isDark ? "border-gray-700" : "border-gray-300"}
             transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg`}
           >
-            {previewUrl ? (
-              <img src={previewUrl} alt="Profile" className="h-full w-full object-cover" />
+            { displayProfileUrl ? (
+              <img
+                src={displayProfileUrl}
+                alt="Profile"
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  e.target.src = ""; // fallback if URL broken
+                  e.target.style.display = "none";
+                }}
+              />
             ) : (
-              <div
-                className={`flex h-full w-full items-center justify-center text-4xl font-bold
-                ${isDark ? "bg-gray-800 text-gray-300" : "bg-gray-200 text-gray-700"}`}
-              >
+              <div className={`flex h-full w-full items-center justify-center text-4xl font-bold
+                ${isDark ? "bg-gray-800 text-gray-300" : "bg-gray-200 text-gray-700"}`}>
                 {(user?.username || "U")[0].toUpperCase()}
               </div>
             )}

@@ -104,6 +104,24 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const refreshUser = async () => {
+    const token = sessionStorage.getItem("access_token");
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${API_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const fresh = await res.json();
+        setUser(fresh);
+      }
+    } catch (err) {
+      console.error("Refresh user failed", err);
+    }
+  };
+
+
   const refreshAccessToken = async () => {
     const refreshToken = getRefreshToken();
     if (!refreshToken) return logout();
@@ -143,6 +161,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         refreshAccessToken,
         getAccessToken,
+        refreshUser,
       }}
     >
       {children}
