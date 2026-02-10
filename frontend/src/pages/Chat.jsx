@@ -1,10 +1,13 @@
 import { FaSearch } from "react-icons/fa";
 import { FiSend } from "react-icons/fi";
 import { useState, useRef, useEffect } from "react";
+import { useParams } from 'react-router-dom';
+import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import SidePanel from "../components/Sidepanel";
 import EditProfile from "../components/EditProfile";
 import SearchChat from "../components/SearchChat";
+
 
 const Chat = ({ theme }) => {
   const [profileVisible, setProfileVisible] = useState(false);
@@ -12,9 +15,10 @@ const Chat = ({ theme }) => {
   const [searchVisible, setSearchVisible] = useState(false);
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState([]);
-
+  const chatID = useParams().id; // Get chat ID from URL params
   const inputRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const {getAccessToken} = useAuth();
 
   const themeBg = isDark ? "bg-black text-white" : "bg-white text-black";
 
@@ -22,22 +26,114 @@ const Chat = ({ theme }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const ThinkingDots = () => (
+    <span className="inline-flex gap-1 items-center">
+      <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" />
+      <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce delay-150" />
+      <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce delay-300" />
+    </span>
+  );
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_API_URL}/chat/messages/${chatID}`,
+          {
+            headers: {
+              Authorization: `Bearer ${getAccessToken()}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!res.ok) throw new Error("Failed to load messages");
+
+        const data = await res.json();
+        setMessages(data.messages || []);
+      } catch (err) {
+        console.error("Message fetch error:", err);
+      }
+    };
+
+    if (chatID) fetchMessages();
+  }, [chatID]);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!query.trim()) return;
 
-    const newMsg = { time: Date.now(), message: query.trim() };
-    setMessages((prev) => [...prev, newMsg]);
+    const userMsg = {
+      id: crypto.randomUUID(),
+      session_id: chatID,
+      role: "user",
+      content: query.trim(),
+      timestamp: new Date().toISOString(),
+      metadata: {
+        model_name: "gemini-2.5-flash",
+        token_count: 0,
+        finish_reason: null,
+        sources: [],
+      },
+      is_streaming: true,
+      is_error: false,
+    };
 
+    // Optimistic UI update
+    const thinkingMsg = {
+      id: "thinking",
+      role: "assistant",
+      content: "Thinking...",
+      is_streaming: true,
+      is_error: false,
+    };
+
+    setMessages((prev) => [...prev, userMsg, thinkingMsg]);
     setQuery("");
-    if (inputRef.current) {
-      inputRef.current.style.height = "auto";
-      inputRef.current.focus();
+
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/chat/message`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${getAccessToken()}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            content: userMsg.content,
+            session_id: chatID,
+          }),
+        }
+      );
+
+      if (!res.ok) throw new Error(res.statusText);
+
+      const assistantMsg = await res.json();
+
+      setMessages((prev) =>
+        prev
+          .map((m) =>
+            m.id === userMsg.id ? { ...m, is_streaming: false } : m
+          )
+          .filter((m) => m.id !== "thinking")
+          .concat(assistantMsg)
+      );
+
+
+    } catch (err) {
+      console.error("Send error:", err);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === userMsg.id ? { ...m, is_streaming: false, is_error: true } : m
+        )
+      );
     }
   };
+
 
   return !profileVisible ? (
     <div className={`h-screen grid grid-cols-[auto_1fr] ${themeBg}`}>
@@ -71,17 +167,51 @@ const Chat = ({ theme }) => {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-4 max-w-5xl mx-auto">
-                {messages.map((msg, index) => (
-                  <div
-                    key={msg.time}
-                    className={`self-end px-4 py-2.5 rounded-2xl max-w-[80%] md:max-w-2xl
-                      ${isDark ? "bg-neutral-800 text-white" : "bg-gray-200 text-black"}
-                    `}
-                  >
-                    {msg.message}
-                  </div>
-                ))}
+              <div className="flex flex-col gap-4 max-w-7xl mx-auto">
+                {messages.map((msg, index) => {
+                  const isUser = msg.role === "user";
+
+                  return (
+                    <div
+                      key={msg.id || index}
+                      className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`
+                          px-4 py-2.5 rounded-2xl max-w-[80%] md:max-w-2xl wrap-break-words
+                          ${
+                            isUser
+                              ? isDark
+                                ? "bg-emerald-500 text-black"
+                                : "bg-emerald-500 text-white"
+                              : isDark
+                              ? "bg-neutral-800 text-white"
+                              : "bg-gray-200 text-black"
+                          }
+                        `}
+                      >
+                        {msg.is_streaming ? <ThinkingDots /> : msg.content}
+                        <div
+                          className={`
+                            text-[10px] mt-1 text-right
+                            ${
+                            isUser
+                              ? isDark
+                                ? "text-black"
+                                : "text-white"
+                              : isDark
+                              ? "text-white"
+                              : "text-black"
+                          }
+                          `}
+                        >
+                          {new Date(msg.timestamp).toLocaleTimeString()}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
                 <div ref={messagesEndRef} />
               </div>
             )}

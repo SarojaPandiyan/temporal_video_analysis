@@ -8,7 +8,7 @@ import os
 
 from backend.dependencies import get_current_user
 from backend.models.user import UserOut
-from backend.models.message import ChatMessage, ChatSession, MessageRole, ChatRequest, ChatHistory
+from backend.models.message import ChatMessage, ChatSession, MessageRole, ChatRequest, ChatHistory, ChatMessages
 from backend.db import chat_sessions_collection, events_collection
 from backend.core.config import settings
 
@@ -17,6 +17,26 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 # Configure Gemini
 genai.configure(api_key=settings.GOOGLE_API_KEY)
 model = genai.GenerativeModel("gemini-2.5-flash")  # or gemini-1.5-pro
+
+@router.get('/messages/{session_id}', response_model=ChatMessages)
+async def get_messages(
+    session_id: str,
+    current_user: Annotated[UserOut, Depends(get_current_user)] = None
+):
+    print(session_id)
+    print(current_user.id)
+    session_doc = await chat_sessions_collection.find_one({
+        "session_id": session_id,
+        "user_id": current_user.id
+    })
+    print(session_doc)
+    
+    if not session_doc:
+        raise HTTPException(404, "Chat session not found or not yours")
+
+    messages = session_doc.get("messages", [])
+    return ChatMessages(session_id=session_id, messages=messages)
+
 
 @router.post("/message", response_model=ChatMessage)
 async def send_chat_message(
@@ -27,9 +47,10 @@ async def send_chat_message(
     session_id = request.session_id
     if not content.strip():
         raise HTTPException(400, "Message cannot be empty")
+    print("Received message:", content, "Session ID:", session_id)
     if session_id:
         session_doc = await chat_sessions_collection.find_one({
-            "_id": ObjectId(session_id),
+            "session_id": session_id,
             "user_id": current_user.id
         })
         if not session_doc:
@@ -52,7 +73,7 @@ async def send_chat_message(
         content=content,
     )
     await chat_sessions_collection.update_one(
-        {"_id": ObjectId(session_id)},
+        {"session_id": session_id},
         {
             "$push": {"messages": user_msg.model_dump(by_alias=True)},
             "$set": {"updated_at": datetime.utcnow()}
@@ -121,7 +142,7 @@ If no relevant data, say so honestly.
     )
 
     await chat_sessions_collection.update_one(
-        {"_id": ObjectId(session_id)},
+        {"session_id": session_id},
         {
             "$push": {"messages": assistant_msg.model_dump(by_alias=True)},
             "$set": {"updated_at": datetime.utcnow()}
@@ -130,7 +151,7 @@ If no relevant data, say so honestly.
 
     return assistant_msg
 
-@router.post("/fetch-history", response_model=ChatHistory)
+@router.get("/fetch-history", response_model=ChatHistory)
 async def get_chat_history(
     current_user: Annotated[UserOut, Depends(get_current_user)]
 ):

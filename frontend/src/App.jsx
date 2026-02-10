@@ -32,7 +32,15 @@ function App() {
                 <Signup isDark={isDark} />
               </PublicRoute>} />
             <Route
-              path="/chat"
+              path="/chat/"
+              element={
+                <ProtectedRoute>
+                  <Chat isDark={isDark} />
+                </ProtectedRoute>
+              }
+            />
+                        <Route
+              path="/chat/:id"
               element={
                 <ProtectedRoute>
                   <Chat isDark={isDark} />

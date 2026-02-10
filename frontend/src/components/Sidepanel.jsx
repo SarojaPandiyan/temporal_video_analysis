@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import { FiSidebar, FiSettings } from "react-icons/fi";
 import { RiEdit2Line } from "react-icons/ri";
 import { FaSearch } from "react-icons/fa";
@@ -9,7 +10,8 @@ const SidePanel = ({ isDark, searchVisible }) => {
   const [chatSessions, setChatSessions] = useState([]);
   const [loading, setLoading] = useState(true);     // ← NEW: loading state
   const [fetchError, setFetchError] = useState(null); // ← optional: error state
-  const {getAccessToken} = useAuth()
+  const {getAccessToken} = useAuth();
+  const navigate = useNavigate();
 
   const bg = isDark ? "bg-neutral-950" : "bg-white";
   const text = isDark ? "text-neutral-200" : "text-neutral-800";
@@ -29,7 +31,6 @@ const SidePanel = ({ isDark, searchVisible }) => {
         }
 
         const res = await fetch(`${import.meta.env.VITE_API_URL}/chat/fetch-history`, {
-              method: "POST",                      // ← THIS WAS MISSING
               headers: {
                 "Authorization": `Bearer ${token}`,
                 "Content-Type": "application/json", // optional but good practice
@@ -40,7 +41,7 @@ const SidePanel = ({ isDark, searchVisible }) => {
         }
 
         const data = await res.json();
-        console.log("Fetched chat sessions:", data.chat_sessions);
+        // console.log("Fetched chat sessions:", data.chat_sessions);
         setChatSessions(data.chat_sessions || []);
       } catch (err) {
         console.error("Chat history fetch error:", err);
@@ -85,11 +86,15 @@ const SidePanel = ({ isDark, searchVisible }) => {
         groups.older.push(session);
       }
     });
-    console.log(chatSessions)
+    // console.log(groups);
     return groups;
   };
 
   const groups = groupSessions();
+
+  const handleChatClick = (session) => {
+    navigate(`/chat/${session.session_id}`);
+  };
 
   return (
     <div
@@ -168,6 +173,7 @@ const SidePanel = ({ isDark, searchVisible }) => {
                       <div
                         key={session.session_id}
                         className={`px-3 py-2.5 rounded-lg cursor-pointer text-sm ${hover} transition-colors`}
+                        onClick={() => handleChatClick(session)}
                       >
                         {session.title || "Untitled Chat"}
                       </div>
@@ -183,6 +189,7 @@ const SidePanel = ({ isDark, searchVisible }) => {
                       <div
                         key={session.session_id}
                         className={`px-3 py-2.5 rounded-lg cursor-pointer text-sm ${hover} transition-colors`}
+                        onClick={() => handleChatClick(session)}
                       >
                         {session.title || "Untitled Chat"}
                       </div>
@@ -198,6 +205,7 @@ const SidePanel = ({ isDark, searchVisible }) => {
                       <div
                         key={session.session_id}
                         className={`px-3 py-2.5 rounded-lg cursor-pointer text-sm ${hover} transition-colors`}
+                        onClick={() => handleChatClick(session)}
                       >
                         {session.title || "Untitled Chat"}
                       </div>
