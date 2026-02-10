@@ -8,7 +8,7 @@ import os
 
 from backend.dependencies import get_current_user
 from backend.models.user import UserOut
-from backend.models.message import ChatMessage, ChatSession, MessageRole, ChatRequest
+from backend.models.message import ChatMessage, ChatSession, MessageRole, ChatRequest, ChatHistory
 from backend.db import chat_sessions_collection, events_collection
 from backend.core.config import settings
 
@@ -129,3 +129,28 @@ If no relevant data, say so honestly.
     )
 
     return assistant_msg
+
+@router.post("/fetch-history", response_model=ChatHistory)
+async def get_chat_history(
+    current_user: Annotated[UserOut, Depends(get_current_user)]
+):
+    try:
+        projection = {
+            "session_id": 1,
+            "user_id": 1,
+            "title": 1,
+            "updated_at": 1,
+            "_id": 0
+        }
+
+        cursor = chat_sessions_collection.find(
+            {"user_id": current_user.id},
+            projection=projection
+        )
+        
+        sessions = []
+        async for doc in cursor:
+            sessions.append(doc)
+        return ChatHistory(chat_sessions=sessions)
+    except Exception as e:
+        print("Error: ", str(e))

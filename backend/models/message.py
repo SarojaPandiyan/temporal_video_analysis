@@ -42,7 +42,11 @@ class ChatSession(BaseModel):
     session_id: str
     user_id: str
     title: str
+    updated_at: Optional[datetime]
     
 class ChatMessages(BaseModel):
     session_id: str
     messages: List[ChatMessage] = Field(default_factory=list)
+    
+class ChatHistory(BaseModel):
+    chat_sessions: List[ChatSession]
