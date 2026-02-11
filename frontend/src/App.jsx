@@ -47,6 +47,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/not-found" element={<NotFound isDark={isDark} />} />
             <Route path="*" element={<NotFound isDark={isDark} />} />
           </Routes>
         </PageTransition>

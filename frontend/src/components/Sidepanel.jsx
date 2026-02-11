@@ -4,6 +4,7 @@ import { FiSidebar, FiSettings } from "react-icons/fi";
 import { RiEdit2Line } from "react-icons/ri";
 import { FaSearch } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
+import { FiTrash2 } from "react-icons/fi";
 
 const SidePanel = ({ isDark, searchVisible }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -52,7 +53,7 @@ const SidePanel = ({ isDark, searchVisible }) => {
     };
 
     fetchHistory();
-  }, []);
+  }, [isExpanded, getAccessToken]); // Refetch when panel is expanded or access token changes
 
   // Group sessions by recency
   const groupSessions = () => {
@@ -96,6 +97,33 @@ const SidePanel = ({ isDark, searchVisible }) => {
     navigate(`/chat/${session.session_id}`);
   };
 
+  const deleteSession = async (sessionId) => {
+    if (!window.confirm("Are you sure you want to delete this chat?")) return;
+    
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/chat/delete-messages/${sessionId}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${getAccessToken()}`,
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (!res.ok) {
+        throw new Error("Failed to delete chat session");
+      }
+      // Remove deleted session from state
+      setChatSessions((prev) => prev.filter((s) => s.session_id !== sessionId));
+      if(window.location.pathname === `/chat/${sessionId}`) {
+        navigate('/chat'); // Redirect to new chat if currently viewing deleted session
+      }
+    }
+    catch (err) {
+      console.error("Delete session error:", err);
+      alert("Couldn't delete chat session");
+    }
+  };
+
   return (
     <div
       className={`
@@ -130,7 +158,7 @@ const SidePanel = ({ isDark, searchVisible }) => {
               className={`flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer ${hover}`}
             >
               <RiEdit2Line className="shrink-0" />
-              <span className="text-sm font-medium">New Chat</span>
+              <span className="text-sm font-medium" onClick={() => navigate('/chat')}>New Chat</span>
             </div>
           </div>
         )}
@@ -138,7 +166,7 @@ const SidePanel = ({ isDark, searchVisible }) => {
         {/* Chat History Section */}
         {isExpanded && (
           <div className="mt-6 flex-1 overflow-y-auto px-2">
-            <h3 className="px-3 mb-2 text-xs font-semibold opacity-70">Chats</h3>
+            <h3 className="px-3 mb-2 text-xl font-semibold opacity-70">Chats</h3>
 
             {/* Loading State */}
             {loading && (
@@ -170,13 +198,34 @@ const SidePanel = ({ isDark, searchVisible }) => {
                   <div>
                     <p className="px-3 mb-1 text-xs opacity-60">Today</p>
                     {groups.today.map((session) => (
-                      <div
-                        key={session.session_id}
-                        className={`px-3 py-2.5 rounded-lg cursor-pointer text-sm ${hover} transition-colors`}
-                        onClick={() => handleChatClick(session)}
-                      >
+                    <div
+                      key={session.session_id}
+                      onClick={() => handleChatClick(session)}
+                      className={`
+                        group flex items-center justify-between
+                        px-3 py-2.5 rounded-lg cursor-pointer text-sm
+                        ${hover} transition-colors
+                      `}
+                    >
+                      <span className="truncate">
                         {session.title || "Untitled Chat"}
-                      </div>
+                      </span>
+
+                      {/* Dustbin icon - visible only on hover */}
+                      <FiTrash2
+                        onClick={(e) => {
+                          e.stopPropagation(); 
+                          console.log("Delete session:", session.session_id);
+                          deleteSession(session.session_id);
+                        }}
+                        className="
+                          opacity-0 group-hover:opacity-100
+                          transition-opacity duration-150
+                          text-red-500 hover:text-red-600
+                          shrink-0
+                        "
+                      />
+                    </div>
                     ))}
                   </div>
                 )}
@@ -188,10 +237,31 @@ const SidePanel = ({ isDark, searchVisible }) => {
                     {groups.yesterday.map((session) => (
                       <div
                         key={session.session_id}
-                        className={`px-3 py-2.5 rounded-lg cursor-pointer text-sm ${hover} transition-colors`}
                         onClick={() => handleChatClick(session)}
+                        className={`
+                          group flex items-center justify-between
+                          px-3 py-2.5 rounded-lg cursor-pointer text-sl
+                          ${hover} transition-colors
+                        `}
                       >
-                        {session.title || "Untitled Chat"}
+                        <span className="truncate">
+                          {session.title || "Untitled Chat"}
+                        </span>
+
+                        {/* Dustbin icon - visible only on hover */}
+                        <FiTrash2
+                          onClick={(e) => {
+                            e.stopPropagation(); // prevent navigation
+                            console.log("Delete session:", session.session_id);
+                            deleteSession(session.session_id);
+                          }}
+                          className="
+                            opacity-0 group-hover:opacity-100
+                            transition-opacity duration-150
+                            text-red-500 hover:text-red-600
+                            shrink-0
+                          "
+                        />
                       </div>
                     ))}
                   </div>
@@ -204,11 +274,33 @@ const SidePanel = ({ isDark, searchVisible }) => {
                     {groups.previous7days.map((session) => (
                       <div
                         key={session.session_id}
-                        className={`px-3 py-2.5 rounded-lg cursor-pointer text-sm ${hover} transition-colors`}
                         onClick={() => handleChatClick(session)}
+                        className={`
+                          group flex items-center justify-between
+                          px-3 py-2.5 rounded-lg cursor-pointer text-sm
+                          ${hover} transition-colors
+                        `}
                       >
-                        {session.title || "Untitled Chat"}
+                        <span className="truncate">
+                          {session.title || "Untitled Chat"}
+                        </span>
+
+                        {/* Dustbin icon - visible only on hover */}
+                        <FiTrash2
+                          onClick={(e) => {
+                            e.stopPropagation(); // prevent navigation
+                            console.log("Delete session:", session.session_id);
+                            deleteSession(session.session_id);
+                          }}
+                          className="
+                            opacity-0 group-hover:opacity-100
+                            transition-opacity duration-150
+                            text-red-500 hover:text-red-600
+                            shrink-0
+                          "
+                        />
                       </div>
+
                     ))}
                   </div>
                 )}

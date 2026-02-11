@@ -3,6 +3,7 @@ import { FiSend } from "react-icons/fi";
 import { useState, useRef, useEffect } from "react";
 import { useParams } from 'react-router-dom';
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import SidePanel from "../components/Sidepanel";
 import EditProfile from "../components/EditProfile";
@@ -15,10 +16,11 @@ const Chat = ({ theme }) => {
   const [searchVisible, setSearchVisible] = useState(false);
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState([]);
-  const chatID = useParams().id; // Get chat ID from URL params
+  let chatID = useParams().id; // Get chat ID from URL params
   const inputRef = useRef(null);
   const messagesEndRef = useRef(null);
   const {getAccessToken} = useAuth();
+  const navigate = useNavigate();
 
   const themeBg = isDark ? "bg-black text-white" : "bg-white text-black";
 
@@ -53,6 +55,7 @@ const Chat = ({ theme }) => {
         setMessages(data.messages || []);
       } catch (err) {
         console.error("Message fetch error:", err);
+        navigate('/not-found')
       }
     };
 
@@ -65,7 +68,7 @@ const Chat = ({ theme }) => {
 
   const handleSend = async () => {
     if (!query.trim()) return;
-
+    
     const userMsg = {
       id: crypto.randomUUID(),
       session_id: chatID,
@@ -110,9 +113,16 @@ const Chat = ({ theme }) => {
         }
       );
 
-      if (!res.ok) throw new Error(res.statusText);
-
-      const assistantMsg = await res.json();
+      if (!res.ok){
+        throw new Error(res.statusText);
+      } 
+      // Update chatID if it was a new session
+      const resData = await res.json();
+      if (resData.session_id && resData.session_id !== chatID) {
+        chatID = resData.session_id;
+        navigate(`/chat/${chatID}`); // Navigate to the chat page if not already there
+      }
+      const assistantMsg = resData;
 
       setMessages((prev) =>
         prev
@@ -205,7 +215,7 @@ const Chat = ({ theme }) => {
                           }
                           `}
                         >
-                          {new Date(msg.timestamp).toLocaleTimeString()}
+                          {isUser? new Date(msg.timestamp).toLocaleTimeString(): null}
                         </div>
                       </div>
                     </div>

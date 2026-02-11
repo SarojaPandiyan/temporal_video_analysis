@@ -38,6 +38,19 @@ async def get_messages(
     messages = session_doc.get("messages", [])
     return ChatMessages(session_id=session_id, messages=messages)
 
+@router.delete('/delete-messages/{session_id}', status_code=status.HTTP_204_NO_CONTENT)
+async def delete_messages(
+    session_id: str,
+    current_user: Annotated[UserOut, Depends(get_current_user)] = None
+):
+    result = await chat_sessions_collection.delete_one({
+        "session_id": session_id,
+        "user_id": current_user.id
+    })
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Chat session not found or not yours")
+    return {status.HTTP_204_NO_CONTENT: "Chat session deleted"}
+
 @router.post("/message", response_model=ChatMessage)
 async def send_chat_message(
     request: ChatRequest,
@@ -121,8 +134,9 @@ If no relevant data exists, say so honestly.
     ]
     
     try:
-        response = model.generate_content(messages_for_gemini)
-        answer = response.text.strip()
+        # response = model.generate_content(messages_for_gemini)
+        # answer = response.text.strip()
+        answer = "This is a placeholder response. Gemini API calls are currently disabled for testing purposes."
     except Exception as e:
         raise HTTPException(500, f"LLM error: {str(e)}")
 
