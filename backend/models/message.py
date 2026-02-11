@@ -42,7 +42,8 @@ class ChatSession(BaseModel):
     session_id: str
     user_id: str
     title: str
-    updated_at: Optional[datetime]
+    messages: List[ChatMessage] = Field(default_factory=list)
+    updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
     
 class ChatMessages(BaseModel):
     session_id: str

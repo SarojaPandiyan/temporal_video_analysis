@@ -57,17 +57,17 @@ async def send_chat_message(
         if not session_doc:
             raise HTTPException(404, "Chat session not found or not yours")
     else:
+        session_id = str(ObjectId())                     # Generate once
+
         new_session = ChatSession(
-            session_id=str(ObjectId()),
-            user_id=current_user.id,
-            title=content[:50] + "..." if len(content) > 50 else content,
+            session_id=session_id,
+            user_id=str(current_user.id),
+            title=content[:50] + "..." if len(content) > 50 else content,     # updated_at will be auto-filled by default_factory
         )
-        result = await chat_sessions_collection.insert_one(
+
+        await chat_sessions_collection.insert_one(
             new_session.model_dump(by_alias=True)
         )
-        session_id = str(result.inserted_id)
-        session_doc = new_session.model_dump(by_alias=True)
-
 
     user_msg = ChatMessage(
         id=str(ObjectId()),
