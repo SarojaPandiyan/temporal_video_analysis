@@ -11,6 +11,7 @@ from backend.models.user import UserOut
 from backend.models.message import ChatMessage, ChatSession, MessageRole, ChatRequest, ChatHistory, ChatMessages
 from backend.db import chat_sessions_collection, events_collection
 from backend.core.config import settings
+from backend.utils.time_extraction import extract_time_range
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -37,17 +38,17 @@ async def get_messages(
     messages = session_doc.get("messages", [])
     return ChatMessages(session_id=session_id, messages=messages)
 
-
 @router.post("/message", response_model=ChatMessage)
 async def send_chat_message(
     request: ChatRequest,
-    current_user: Annotated[UserOut, Depends(get_current_user)] = None
+    current_user: Annotated[UserOut, Depends(get_current_user)]
 ):
-    content = request.content
+    content = request.content.strip()
     session_id = request.session_id
-    if not content.strip():
+
+    if not content:
         raise HTTPException(400, "Message cannot be empty")
-    print("Received message:", content, "Session ID:", session_id)
+
     if session_id:
         session_doc = await chat_sessions_collection.find_one({
             "session_id": session_id,
@@ -56,22 +57,25 @@ async def send_chat_message(
         if not session_doc:
             raise HTTPException(404, "Chat session not found or not yours")
     else:
-        # Create new session
         new_session = ChatSession(
             session_id=str(ObjectId()),
             user_id=current_user.id,
             title=content[:50] + "..." if len(content) > 50 else content,
         )
-        result = await chat_sessions_collection.insert_one(new_session.model_dump(by_alias=True))
+        result = await chat_sessions_collection.insert_one(
+            new_session.model_dump(by_alias=True)
+        )
         session_id = str(result.inserted_id)
         session_doc = new_session.model_dump(by_alias=True)
+
 
     user_msg = ChatMessage(
         id=str(ObjectId()),
         session_id=session_id,
         role=MessageRole.USER,
-        content=content,
+        content=content
     )
+
     await chat_sessions_collection.update_one(
         {"session_id": session_id},
         {
@@ -81,58 +85,47 @@ async def send_chat_message(
     )
 
     time_context = ""
-    if any(word in content.lower() for word in ["between", "from", "since", "until", "during", "time", "when"]):
-        # Simple time extraction (you can improve with regex/NLP later)
-        # For now, assume user provides timestamps in message
+    start_dt, end_dt = extract_time_range(content)
+
+    if start_dt and end_dt:
         events = await events_collection.find({
-            "entry_time": {"$exists": True}
-            # You can add real time filtering later
-        }).to_list(20)
+            "entry_time": {
+                "$gte": start_dt,
+                "$lte": end_dt
+            }
+        }).sort("entry_time", 1).to_list(50)
 
         if events:
-            time_context = "Relevant events in the database:\n"
+            time_context = f"Events recorded between {start_dt} and {end_dt}:\n"
             for e in events:
-                time_context += f"- {e.get('object_type')} ({e.get('color') or 'unknown color'}) entered at {e['entry_time']} and exited at {e.get('exit_time', 'still active')}\n"
+                time_context += (
+                    f"- {e.get('object_type','object')} "
+                    f"({e.get('color','unknown color')}) "
+                    f"entered at {e['entry_time']} "
+                    f"and exited at {e.get('exit_time','still active')}\n"
+                )
+        else:
+            time_context = f"No events recorded between {start_dt} and {end_dt}."
 
-    # ────────────────────────────────────────────────
-    # 4. Build prompt for Gemini
-    # ────────────────────────────────────────────────
     system_prompt = """
-You are a helpful video surveillance assistant. 
-You analyze entry/exit events from security cameras.
-Answer naturally and concisely.
-If you have time-based events, summarize what happened.
-If no relevant data, say so honestly.
+You are a helpful video surveillance assistant.
+You analyze security camera entry and exit events.
+Summarize time-based activity clearly and accurately.
+If no relevant data exists, say so honestly.
 """
 
     messages_for_gemini = [
         {"role": "user", "parts": [system_prompt]},
-        {"role": "model", "parts": ["Understood. I will answer based on the provided events."]},
+        {"role": "model", "parts": ["Understood."]},
+        {"role": "user", "parts": [f"User question: {content}\n\n{time_context}"]}
     ]
-
-    # Add recent conversation context (last 6 messages)
-    print(session_doc)
-    # recent_msgs = session_doc["messages"][-6:]
-    # for msg in recent_msgs:
-    #     role = "user" if msg["role"] == MessageRole.USER else "model"
-    #     messages_for_gemini.append({"role": role, "parts": [msg["content"]]})
-
-    # Add current question + time context
-    full_prompt = f"User question: {content}\n\n{time_context}"
-    messages_for_gemini.append({"role": "user", "parts": [full_prompt]})
-
-    # ────────────────────────────────────────────────
-    # 5. Call Gemini
-    # ────────────────────────────────────────────────
+    
     try:
         response = model.generate_content(messages_for_gemini)
         answer = response.text.strip()
     except Exception as e:
         raise HTTPException(500, f"LLM error: {str(e)}")
 
-    # ────────────────────────────────────────────────
-    # 6. Save assistant reply
-    # ────────────────────────────────────────────────
     assistant_msg = ChatMessage(
         id=str(ObjectId()),
         session_id=session_id,
