@@ -134,9 +134,10 @@ If no relevant data exists, say so honestly.
     ]
     
     try:
-        # response = model.generate_content(messages_for_gemini)
-        # answer = response.text.strip()
-        answer = "This is a placeholder response. Gemini API calls are currently disabled for testing purposes."
+        response = model.generate_content(messages_for_gemini)
+        answer = response.text.strip()
+        print(answer)
+        # answer = "This is a placeholder response. Gemini API calls are currently disabled for testing purposes."
     except Exception as e:
         raise HTTPException(500, f"LLM error: {str(e)}")
 

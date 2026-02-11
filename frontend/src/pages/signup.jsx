@@ -81,7 +81,7 @@ export default function Signup({ isDark }) {
     // 3. Username validation (if using name as username)
     if (!validateUsername(trimmedUsername)) {
       setError(
-        "Display name must be 3–20 characters and contain only letters, numbers, underscore or hyphen"
+        "Display name must be 3–20 characters and contain only letters, numbers, underscore or hyphen",
       );
       setLoading(false);
       return;
@@ -90,7 +90,7 @@ export default function Signup({ isDark }) {
     // 4. Password strength
     if (!validatePassword(password)) {
       setError(
-        "Password must be at least 8 characters long and contain uppercase, lowercase, and a number"
+        "Password must be at least 8 characters long and contain uppercase, lowercase, and a number",
       );
       setLoading(false);
       return;
@@ -108,29 +108,29 @@ export default function Signup({ isDark }) {
     // ────────────────────────────────────────────────
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/auth/signup`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: trimmedUsername,
+            email: trimmedEmail,
+            full_name: trimmedName,
+            password: password,
+          }),
         },
-        body: JSON.stringify({
-          username: trimmedUsername,
-          email: trimmedEmail,
-          full_name: trimmedName,
-          password: password,
-        }),
-      });
+      );
 
       if (!response.ok) {
         const errData = await response.json();
-        throw new Error(
-          errData.detail || "Signup failed. Please try again."
-        );
+        throw new Error(errData.detail || "Signup failed. Please try again.");
       }
 
       // Success
       navigate("/login");
-
     } catch (err) {
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
@@ -142,7 +142,9 @@ export default function Signup({ isDark }) {
     <>
       <div className="fixed top-6 left-6 z-50">
         <div className="flex items-center gap-2">
-          <span className={`font-semibold text-2xl ${theme.text} tracking-tight`}>
+          <span
+            className={`font-semibold text-2xl ${theme.text} tracking-tight`}
+          >
             InsightSphere
           </span>
         </div>
@@ -245,9 +247,7 @@ export default function Signup({ isDark }) {
 
           {/* Error message */}
           {error && (
-            <div className="mb-6 text-red-500 text-sm text-center">
-              {error}
-            </div>
+            <div className="mb-6 text-red-500 text-sm text-center">{error}</div>
           )}
 
           {/* Buttons */}
@@ -278,12 +278,14 @@ export default function Signup({ isDark }) {
                 px-7 py-2.5 text-sm font-semibold rounded-full
                 transition-all duration-200
                 ${theme.btnPrimary}
-                ${(loading ||
-                  !name.trim() ||
-                  !email.trim() ||
-                  !password ||
-                  !confirmPassword) &&
-                  theme.disabled}
+                ${
+                  (loading ||
+                    !name.trim() ||
+                    !email.trim() ||
+                    !password ||
+                    !confirmPassword) &&
+                  theme.disabled
+                }
               `}
             >
               {loading ? "Signing up..." : "Sign Up"}

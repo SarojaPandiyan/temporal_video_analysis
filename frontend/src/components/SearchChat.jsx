@@ -1,10 +1,87 @@
 import { FiSearch, FiX } from "react-icons/fi";
 
 const chats = [
-  { label: "Today", items: ["Profile Edit Toggle"] },
-  { label: "Yesterday", items: ["Chess AI Bot Creation"] },
-  { label: "Previous 7 Days", items: ["Website Announcement Refinement"] },
+  { label: "Today", items: ["Default - Today"] },
+  { label: "Yesterday", items: ["Default - yesterday"] },
+  { label: "Previous 7 Days", items: ["Default - Previous 7 Days"] },
 ];
+
+useEffect(() => {
+  const fetchHistory = async () => {
+    setLoading(true);
+    setFetchError(null);
+
+    try {
+      const token = getAccessToken();
+      if (!token) {
+        setFetchError("Not logged in");
+        return;
+      }
+
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/chat/fetch-history`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json", // optional but good practice
+          },
+        },
+      );
+      if (!res.ok) {
+        throw new Error("Failed to load chat history");
+      }
+
+      const data = await res.json();
+      // console.log("Fetched chat sessions:", data.chat_sessions);
+      setChatSessions(data.chat_sessions || []);
+    } catch (err) {
+      console.error("Chat history fetch error:", err);
+      setFetchError("Couldn't load chats");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchHistory();
+}, []);
+
+// Group sessions by recency
+const groupSessions = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const weekAgo = new Date(today);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+
+  const groups = {
+    today: [],
+    yesterday: [],
+    previous7days: [],
+    older: [],
+  };
+
+  chatSessions.forEach((session) => {
+    const updated = new Date(session.updated_at);
+    updated.setHours(0, 0, 0, 0);
+
+    if (updated.getTime() === today.getTime()) {
+      groups.today.push(session);
+    } else if (updated.getTime() === yesterday.getTime()) {
+      groups.yesterday.push(session);
+    } else if (updated >= weekAgo) {
+      groups.previous7days.push(session);
+    } else {
+      groups.older.push(session);
+    }
+  });
+  // console.log(groups);
+  return groups;
+};
+
+const groups = groupSessions();
 
 const SearchChat = ({ onClose, isDark }) => {
   return (

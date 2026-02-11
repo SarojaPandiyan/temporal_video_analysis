@@ -41,7 +41,7 @@ export default function Login({ isDark }) {
     }
 
     try {
-      await login(username, password);   // ← now we wait
+      await login(username, password); // ← now we wait
       navigate("/chat");
     } catch (err) {
       console.error("Login failed:", err);
@@ -55,7 +55,9 @@ export default function Login({ isDark }) {
         {" "}
         {/* ← increased z-index + better spacing */}
         <div className="flex items-center gap-2">
-          <span className={`ont-semibold text-2xl ${theme.text} tracking-tight`}>
+          <span
+            className={`ont-semibold text-2xl ${theme.text} tracking-tight`}
+          >
             InsightSphere
           </span>
         </div>

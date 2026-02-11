@@ -1,14 +1,13 @@
 import { FaSearch } from "react-icons/fa";
 import { FiSend } from "react-icons/fi";
 import { useState, useRef, useEffect } from "react";
-import { useParams } from 'react-router-dom';
+import { useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import SidePanel from "../components/Sidepanel";
 import EditProfile from "../components/EditProfile";
 import SearchChat from "../components/SearchChat";
-
 
 const Chat = ({ theme }) => {
   const [profileVisible, setProfileVisible] = useState(false);
@@ -19,7 +18,7 @@ const Chat = ({ theme }) => {
   let chatID = useParams().id; // Get chat ID from URL params
   const inputRef = useRef(null);
   const messagesEndRef = useRef(null);
-  const {getAccessToken} = useAuth();
+  const { getAccessToken } = useAuth();
   const navigate = useNavigate();
 
   const themeBg = isDark ? "bg-black text-white" : "bg-white text-black";
@@ -46,7 +45,7 @@ const Chat = ({ theme }) => {
               Authorization: `Bearer ${getAccessToken()}`,
               "Content-Type": "application/json",
             },
-          }
+          },
         );
 
         if (!res.ok) throw new Error("Failed to load messages");
@@ -55,7 +54,7 @@ const Chat = ({ theme }) => {
         setMessages(data.messages || []);
       } catch (err) {
         console.error("Message fetch error:", err);
-        navigate('/not-found')
+        navigate("/not-found");
       }
     };
 
@@ -68,7 +67,7 @@ const Chat = ({ theme }) => {
 
   const handleSend = async () => {
     if (!query.trim()) return;
-    
+
     const userMsg = {
       id: crypto.randomUUID(),
       session_id: chatID,
@@ -98,24 +97,21 @@ const Chat = ({ theme }) => {
     setQuery("");
 
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/chat/message`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${getAccessToken()}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            content: userMsg.content,
-            session_id: chatID,
-          }),
-        }
-      );
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/chat/message`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${getAccessToken()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: userMsg.content,
+          session_id: chatID,
+        }),
+      });
 
-      if (!res.ok){
+      if (!res.ok) {
         throw new Error(res.statusText);
-      } 
+      }
       // Update chatID if it was a new session
       const resData = await res.json();
       if (resData.session_id && resData.session_id !== chatID) {
@@ -126,24 +122,21 @@ const Chat = ({ theme }) => {
 
       setMessages((prev) =>
         prev
-          .map((m) =>
-            m.id === userMsg.id ? { ...m, is_streaming: false } : m
-          )
+          .map((m) => (m.id === userMsg.id ? { ...m, is_streaming: false } : m))
           .filter((m) => m.id !== "thinking")
-          .concat(assistantMsg)
+          .concat(assistantMsg),
       );
-
-
     } catch (err) {
       console.error("Send error:", err);
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === userMsg.id ? { ...m, is_streaming: false, is_error: true } : m
-        )
+          m.id === userMsg.id
+            ? { ...m, is_streaming: false, is_error: true }
+            : m,
+        ),
       );
     }
   };
-
 
   return !profileVisible ? (
     <div className={`h-screen grid grid-cols-[auto_1fr] ${themeBg}`}>
@@ -195,8 +188,8 @@ const Chat = ({ theme }) => {
                                 ? "bg-emerald-500 text-black"
                                 : "bg-emerald-500 text-white"
                               : isDark
-                              ? "bg-neutral-800 text-white"
-                              : "bg-gray-200 text-black"
+                                ? "bg-neutral-800 text-white"
+                                : "bg-gray-200 text-black"
                           }
                         `}
                       >
@@ -205,17 +198,19 @@ const Chat = ({ theme }) => {
                           className={`
                             text-[10px] mt-1 text-right
                             ${
-                            isUser
-                              ? isDark
-                                ? "text-black"
-                                : "text-white"
-                              : isDark
-                              ? "text-white"
-                              : "text-black"
-                          }
+                              isUser
+                                ? isDark
+                                  ? "text-black"
+                                  : "text-white"
+                                : isDark
+                                  ? "text-white"
+                                  : "text-black"
+                            }
                           `}
                         >
-                          {isUser? new Date(msg.timestamp).toLocaleTimeString(): null}
+                          {isUser
+                            ? new Date(msg.timestamp).toLocaleTimeString()
+                            : null}
                         </div>
                       </div>
                     </div>

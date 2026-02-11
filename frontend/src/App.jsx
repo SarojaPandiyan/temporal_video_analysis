@@ -11,26 +11,38 @@ import NotFound from "./pages/NotFound";
 
 function App() {
   const location = useLocation();
-  const isDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+  const isDark =
+    window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
 
   return (
     <AuthProvider>
       <AnimatePresence mode="wait">
         <PageTransition>
           <Routes location={location} key={location.pathname}>
-            <Route path="/" element={
-              <PublicRoute>
-                <Login isDark={isDark} />
-              </PublicRoute>
-             } />
-            <Route path="/login" element={
-              <PublicRoute>  
-                <Login isDark={isDark} />
-              </PublicRoute>} />
-            <Route path="/signup" element={
-              <PublicRoute>
-                <Signup isDark={isDark} />
-              </PublicRoute>} />
+            <Route
+              path="/"
+              element={
+                <PublicRoute>
+                  <Login isDark={isDark} />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/login"
+              element={
+                <PublicRoute>
+                  <Login isDark={isDark} />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/signup"
+              element={
+                <PublicRoute>
+                  <Signup isDark={isDark} />
+                </PublicRoute>
+              }
+            />
             <Route
               path="/chat/"
               element={
@@ -39,7 +51,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-                        <Route
+            <Route
               path="/chat/:id"
               element={
                 <ProtectedRoute>

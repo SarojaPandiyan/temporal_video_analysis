@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 const AuthContext = createContext(null);
 
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL;
 const setCookie = (name, value, days = null) => {
   let expires = "";
   if (days) {
@@ -59,8 +59,8 @@ export const AuthProvider = ({ children }) => {
 
     const data = await res.json();
 
-    setCookie("access_token", data.access_token);                    // session cookie (no expiry)
-    setCookie("refresh_token", data.refresh_token, 7);               // 7 days
+    setCookie("access_token", data.access_token); // session cookie (no expiry)
+    setCookie("refresh_token", data.refresh_token, 7); // 7 days
 
     await fetchCurrentUser();
     setIsAuthenticated(true);
@@ -120,7 +120,6 @@ export const AuthProvider = ({ children }) => {
       console.error("Refresh user failed", err);
     }
   };
-
 
   const refreshAccessToken = async () => {
     const refreshToken = getRefreshToken();

@@ -16,12 +16,12 @@ export default function EditProfile({ onCancel, isDark }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
-  if (user) {
-    setFullName(user.full_name || "");
-    setUsername(user.username || "");
-    setPreviewUrl(user.profile_picture_url || "");
-  }
-}, [user]);
+    if (user) {
+      setFullName(user.full_name || "");
+      setUsername(user.username || "");
+      setPreviewUrl(user.profile_picture_url || "");
+    }
+  }, [user]);
   const theme = {
     bg: isDark ? "bg-black" : "bg-white",
     card: isDark
@@ -67,7 +67,9 @@ export default function EditProfile({ onCancel, isDark }) {
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
   };
-  const displayProfileUrl = selectedFile ? previewUrl : (user?.profile_picture_url || previewUrl);
+  const displayProfileUrl = selectedFile
+    ? previewUrl
+    : user?.profile_picture_url || previewUrl;
 
   const handleSave = async () => {
     setLoading(true);
@@ -89,8 +91,10 @@ export default function EditProfile({ onCancel, isDark }) {
       const requests = [];
 
       const profilePayload = {};
-      if (fullName.trim() !== user?.full_name) profilePayload.full_name = fullName.trim();
-      if (username.trim() !== user?.username) profilePayload.username = username.trim();
+      if (fullName.trim() !== user?.full_name)
+        profilePayload.full_name = fullName.trim();
+      if (username.trim() !== user?.username)
+        profilePayload.username = username.trim();
 
       if (Object.keys(profilePayload).length > 0) {
         requests.push(
@@ -107,7 +111,7 @@ export default function EditProfile({ onCancel, isDark }) {
               throw new Error(err.detail || "Profile update failed");
             }
             return res.json();
-          })
+          }),
         );
       }
 
@@ -129,7 +133,7 @@ export default function EditProfile({ onCancel, isDark }) {
               throw new Error(err.detail || "Image upload failed");
             }
             return res.json();
-          })
+          }),
         );
       }
 
@@ -137,7 +141,10 @@ export default function EditProfile({ onCancel, isDark }) {
       const results = await Promise.all(requests);
 
       // Merge real data from backend
-      const updatedUser = results.reduce((acc, cur) => ({ ...acc, ...cur }), optimisticUser);
+      const updatedUser = results.reduce(
+        (acc, cur) => ({ ...acc, ...cur }),
+        optimisticUser,
+      );
       setUser(updatedUser);
       await refreshUser();
       setPreviewUrl(user.profile_picture_url); // will be updated now
@@ -169,7 +176,7 @@ export default function EditProfile({ onCancel, isDark }) {
             ${isDark ? "border-gray-700" : "border-gray-300"}
             transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg`}
           >
-            { displayProfileUrl ? (
+            {displayProfileUrl ? (
               <img
                 src={displayProfileUrl}
                 alt="Profile"
@@ -180,8 +187,10 @@ export default function EditProfile({ onCancel, isDark }) {
                 }}
               />
             ) : (
-              <div className={`flex h-full w-full items-center justify-center text-4xl font-bold
-                ${isDark ? "bg-gray-800 text-gray-300" : "bg-gray-200 text-gray-700"}`}>
+              <div
+                className={`flex h-full w-full items-center justify-center text-4xl font-bold
+                ${isDark ? "bg-gray-800 text-gray-300" : "bg-gray-200 text-gray-700"}`}
+              >
                 {(user?.username || "U")[0].toUpperCase()}
               </div>
             )}
@@ -267,8 +276,20 @@ export default function EditProfile({ onCancel, isDark }) {
               {loading ? (
                 <span className="flex items-center gap-2">
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
                   </svg>
                   Saving...
                 </span>
