@@ -327,9 +327,31 @@ const SidePanel = ({ isDark, searchVisible }) => {
                     {groups.older.map((session) => (
                       <div
                         key={session.session_id}
-                        className={`px-3 py-2.5 rounded-lg cursor-pointer text-sm ${hover} transition-colors`}
+                        onClick={() => handleChatClick(session)}
+                        className={`
+                        group flex items-center justify-between
+                        px-3 py-2.5 rounded-lg cursor-pointer text-sm
+                        ${hover} transition-colors
+                      `}
                       >
-                        {session.title || "Untitled Chat"}
+                        <span className="truncate">
+                          {session.title || "Untitled Chat"}
+                        </span>
+
+                        {/* Dustbin icon - visible only on hover */}
+                        <FiTrash2
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            console.log("Delete session:", session.session_id);
+                            deleteSession(session.session_id);
+                          }}
+                          className="
+                          opacity-0 group-hover:opacity-100
+                          transition-opacity duration-150
+                          text-red-500 hover:text-red-600
+                          shrink-0
+                        "
+                        />
                       </div>
                     ))}
                   </div>
