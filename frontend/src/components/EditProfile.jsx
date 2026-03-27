@@ -15,6 +15,8 @@ export default function EditProfile({ onCancel, isDark }) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
   useEffect(() => {
     if (user) {
       setFullName(user.full_name || "");
@@ -22,31 +24,31 @@ export default function EditProfile({ onCancel, isDark }) {
       setPreviewUrl(user.profile_picture_url || "");
     }
   }, [user]);
+
   const theme = {
     bg: isDark ? "bg-black" : "bg-white",
     card: isDark
-      ? "bg-[#1f1f1f] border border-gray-800 text-white"
+      ? "bg-[#1a1a1a] border border-gray-800 text-white"
       : "bg-white border border-gray-200 shadow-2xl text-black",
     text: isDark ? "text-gray-100" : "text-gray-900",
     label: isDark ? "text-gray-400" : "text-gray-600",
-    inputBg: isDark ? "bg-gray-900/60" : "bg-gray-50",
+    inputBg: isDark ? "bg-gray-900/70" : "bg-gray-50",
     inputBorder: isDark ? "border-gray-700" : "border-gray-300",
     inputText: isDark
       ? "text-gray-100 placeholder:text-gray-500"
       : "text-gray-900 placeholder:text-gray-400",
     inputFocus: isDark
-      ? "focus:border-gray-400 focus:ring-gray-500/30"
-      : "focus:border-gray-500 focus:ring-gray-400/20",
+      ? "focus:border-emerald-500 focus:ring-emerald-500/30"
+      : "focus:border-emerald-600 focus:ring-emerald-500/20",
     btnPrimary: isDark
-      ? "bg-white text-black hover:bg-gray-200"
-      : "bg-black text-white hover:bg-gray-800",
+      ? "bg-white text-black hover:bg-gray-100 active:bg-gray-200"
+      : "bg-black text-white hover:bg-gray-900 active:bg-gray-950",
     btnSecondary: isDark
-      ? "text-gray-300 border border-gray-700 hover:bg-gray-800"
-      : "text-gray-700 border border-gray-300 hover:bg-gray-100",
+      ? "text-gray-300 border border-gray-700 hover:bg-gray-800 active:bg-gray-900"
+      : "text-gray-700 border border-gray-300 hover:bg-gray-100 active:bg-gray-200",
     btnDanger: isDark
-      ? "text-red-400 hover:text-red-300"
-      : "text-red-600 hover:text-red-500",
-    disabled: "opacity-50 cursor-not-allowed",
+      ? "text-red-400 hover:text-red-300 active:text-red-500"
+      : "text-red-600 hover:text-red-500 active:text-red-700",
   };
 
   const handleFileChange = (e) => {
@@ -67,13 +69,13 @@ export default function EditProfile({ onCancel, isDark }) {
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
   };
-  const displayProfileUrl = selectedFile
-    ? previewUrl
-    : user?.profile_picture_url || previewUrl;
+
+  const displayProfileUrl = selectedFile ? previewUrl : user?.profile_picture_url || previewUrl;
 
   const handleSave = async () => {
     setLoading(true);
     setError("");
+    setSuccess(false);
 
     const token = getAccessToken();
     const previousUser = { ...user };
@@ -91,10 +93,8 @@ export default function EditProfile({ onCancel, isDark }) {
       const requests = [];
 
       const profilePayload = {};
-      if (fullName.trim() !== user?.full_name)
-        profilePayload.full_name = fullName.trim();
-      if (username.trim() !== user?.username)
-        profilePayload.username = username.trim();
+      if (fullName.trim() !== user?.full_name) profilePayload.full_name = fullName.trim();
+      if (username.trim() !== user?.username) profilePayload.username = username.trim();
 
       if (Object.keys(profilePayload).length > 0) {
         requests.push(
@@ -111,11 +111,10 @@ export default function EditProfile({ onCancel, isDark }) {
               throw new Error(err.detail || "Profile update failed");
             }
             return res.json();
-          }),
+          })
         );
       }
 
-      // 2. Profile picture upload
       if (selectedFile) {
         const formData = new FormData();
         formData.append("file", selectedFile);
@@ -123,9 +122,7 @@ export default function EditProfile({ onCancel, isDark }) {
         requests.push(
           fetch(`${import.meta.env.VITE_API_URL}/users/me/profile-picture`, {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
             body: formData,
           }).then(async (res) => {
             if (!res.ok) {
@@ -133,24 +130,23 @@ export default function EditProfile({ onCancel, isDark }) {
               throw new Error(err.detail || "Image upload failed");
             }
             return res.json();
-          }),
+          })
         );
       }
 
-      // Run parallel
       const results = await Promise.all(requests);
 
-      // Merge real data from backend
-      const updatedUser = results.reduce(
-        (acc, cur) => ({ ...acc, ...cur }),
-        optimisticUser,
-      );
+      const updatedUser = results.reduce((acc, cur) => ({ ...acc, ...cur }), optimisticUser);
       setUser(updatedUser);
       await refreshUser();
-      setPreviewUrl(user.profile_picture_url); // will be updated now
-      onCancel(); // close modal
+
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        onCancel();
+      }, 800);
     } catch (err) {
-      setUser(previousUser); // rollback
+      setUser(previousUser);
       setError(err.message || "Something went wrong");
     } finally {
       setLoading(false);
@@ -158,69 +154,90 @@ export default function EditProfile({ onCancel, isDark }) {
   };
 
   return (
-    <div
-      className={`fixed inset-0 z-50 flex items-center justify-center ${theme.bg} transition-colors duration-300`}
-    >
+    <div className={`fixed inset-0 z-50 flex items-center justify-center ${theme.bg} transition-colors duration-300`}>
+      {/* Backdrop with fade */}
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-xl animate-fade-in" />
+
       <div
-        className={`w-[90%] max-w-md rounded-2xl p-8 ${theme.card} transition-all duration-300`}
+        className={`
+          relative w-[92%] max-w-md rounded-3xl p-8 
+          ${theme.card} 
+          animate-modal-pop
+          shadow-2xl
+          ${success ? 'ring-4 ring-emerald-500/30' : ''}
+        `}
       >
         {/* Header */}
-        <h2 className="mb-8 text-2xl font-bold tracking-tight text-center">
+        <h2 className="mb-8 text-3xl font-bold tracking-tighter text-center">
           Edit Profile
         </h2>
 
-        {/* Profile Photo */}
-        <div className="relative mx-auto mb-8 h-28 w-28 sm:h-32 sm:w-32 group">
-          <div
-            className={`h-full w-full rounded-full overflow-hidden border-2
-            ${isDark ? "border-gray-700" : "border-gray-300"}
-            transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg`}
-          >
-            {displayProfileUrl ? (
-              <img
-                src={displayProfileUrl}
-                alt="Profile"
-                className="h-full w-full object-cover"
-                onError={(e) => {
-                  e.target.src = ""; // fallback if URL broken
-                  e.target.style.display = "none";
-                }}
-              />
-            ) : (
-              <div
-                className={`flex h-full w-full items-center justify-center text-4xl font-bold
-                ${isDark ? "bg-gray-800 text-gray-300" : "bg-gray-200 text-gray-700"}`}
-              >
-                {(user?.username || "U")[0].toUpperCase()}
-              </div>
-            )}
-          </div>
+        {/* Profile Photo Section */}
+        <div className="relative mx-auto mb-10 flex justify-center">
+          <div className="relative group">
+            <div
+              className={`
+                h-32 w-32 sm:h-36 sm:w-36 rounded-full overflow-hidden 
+                border-4 transition-all duration-500
+                ${isDark ? "border-gray-700" : "border-gray-200"}
+                group-hover:border-emerald-500 group-hover:scale-105
+                shadow-xl
+              `}
+            >
+              {displayProfileUrl ? (
+                <img
+                  src={displayProfileUrl}
+                  alt="Profile"
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                  }}
+                />
+              ) : (
+                <div
+                  className={`flex h-full w-full items-center justify-center text-6xl font-bold
+                    ${isDark ? "bg-gray-800 text-gray-400" : "bg-gray-100 text-gray-600"}`}
+                >
+                  {(user?.username || "U")[0].toUpperCase()}
+                </div>
+              )}
+            </div>
 
-          {/* Upload overlay */}
-          <label
-            className={`absolute bottom-0 right-0 rounded-full p-3 cursor-pointer shadow-md
-            ${isDark ? "bg-gray-800 text-white" : "bg-white text-black"}
-            border ${isDark ? "border-gray-700" : "border-gray-300"}
-            transition-all duration-200 hover:scale-110 hover:shadow-lg`}
-          >
-            <FaPhotoVideo className="text-xl" />
-            <input
-              type="file"
-              accept={ALLOWED_TYPES.join(",")}
-              className="hidden"
-              onChange={handleFileChange}
-            />
-          </label>
+            {/* Upload Button with Ripple Effect */}
+            <label
+              className={`
+                absolute -bottom-1 -right-1 flex h-11 w-11 items-center justify-center 
+                rounded-full cursor-pointer shadow-lg border
+                ${isDark ? "bg-gray-900 border-gray-700" : "bg-white border-gray-300"}
+                transition-all duration-200 hover:scale-110 active:scale-95
+                group-hover:ring-4 group-hover:ring-emerald-500/30
+              `}
+            >
+              <FaPhotoVideo className="text-2xl text-emerald-500" />
+              <input
+                type="file"
+                accept={ALLOWED_TYPES.join(",")}
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </label>
+          </div>
         </div>
 
-        {/* Error message */}
+        {/* Success / Error Messages */}
+        {success && (
+          <div className="mb-6 text-emerald-500 text-sm text-center py-2 px-4 rounded-2xl bg-emerald-500/10 animate-success-pop">
+            ✓ Profile updated successfully
+          </div>
+        )}
+
         {error && (
-          <div className="mb-6 text-red-500 text-sm text-center bg-red-500/10 py-2 px-4 rounded-lg">
+          <div className="mb-6 text-red-500 text-sm text-center bg-red-500/10 py-3 px-5 rounded-2xl animate-shake">
             {error}
           </div>
         )}
 
-        {/* Inputs */}
+        {/* Form Inputs */}
         <div className="space-y-6">
           <div>
             <label className={`mb-2 block text-sm font-medium ${theme.label}`}>
@@ -230,8 +247,13 @@ export default function EditProfile({ onCancel, isDark }) {
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="Your display name"
-              className={`w-full rounded-lg px-4 py-3 border ${theme.inputBorder} ${theme.inputBg} ${theme.inputText} outline-none transition-all duration-200 ${theme.inputFocus}`}
+              placeholder="Your full name"
+              className={`
+                w-full rounded-2xl px-5 py-4 border ${theme.inputBorder} 
+                ${theme.inputBg} ${theme.inputText} outline-none 
+                transition-all duration-300 focus:scale-[1.02]
+                ${theme.inputFocus}
+              `}
             />
           </div>
 
@@ -243,27 +265,40 @@ export default function EditProfile({ onCancel, isDark }) {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="@yourusername"
-              className={`w-full rounded-lg px-4 py-3 border ${theme.inputBorder} ${theme.inputBg} ${theme.inputText} outline-none transition-all duration-200 ${theme.inputFocus}`}
+              placeholder="@username"
+              className={`
+                w-full rounded-2xl px-5 py-4 border ${theme.inputBorder} 
+                ${theme.inputBg} ${theme.inputText} outline-none 
+                transition-all duration-300 focus:scale-[1.02]
+                ${theme.inputFocus}
+              `}
             />
           </div>
         </div>
 
-        {/* Buttons */}
-        <div className="mt-10 flex flex-col sm:flex-row sm:justify-between gap-4">
+        {/* Action Buttons */}
+        <div className="mt-12 flex flex-col sm:flex-row gap-4">
           <button
             onClick={logout}
             disabled={loading}
-            className={`px-6 py-2.5 text-sm font-medium rounded-full border transition-colors ${theme.btnDanger} ${loading ? theme.disabled : ""}`}
+            className={`
+              flex-1 py-3.5 text-sm font-medium rounded-2xl border 
+              transition-all active:scale-[0.97]
+              ${theme.btnDanger} ${loading ? "opacity-50 cursor-not-allowed" : ""}
+            `}
           >
             Logout
           </button>
 
-          <div className="flex flex-col sm:flex-row gap-4 sm:gap-3">
+          <div className="flex flex-1 gap-3">
             <button
               onClick={onCancel}
               disabled={loading}
-              className={`px-6 py-2.5 text-sm font-medium rounded-full border transition-colors ${theme.btnSecondary} ${loading ? theme.disabled : ""}`}
+              className={`
+                flex-1 py-3.5 text-sm font-medium rounded-2xl border 
+                transition-all active:scale-[0.97]
+                ${theme.btnSecondary} ${loading ? "opacity-50 cursor-not-allowed" : ""}
+              `}
             >
               Cancel
             </button>
@@ -271,35 +306,74 @@ export default function EditProfile({ onCancel, isDark }) {
             <button
               onClick={handleSave}
               disabled={loading}
-              className={`px-7 py-2.5 text-sm font-semibold rounded-full transition-all ${theme.btnPrimary} ${loading ? theme.disabled : ""}`}
+              className={`
+                flex-1 py-3.5 text-sm font-semibold rounded-2xl 
+                transition-all active:scale-[0.97] shadow-lg
+                ${theme.btnPrimary} ${loading ? "opacity-50 cursor-not-allowed" : ""}
+              `}
             >
               {loading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
                   Saving...
                 </span>
               ) : (
-                "Save Changes"
+                "Save"
               )}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Custom Animations */}
+      <style jsx>{`
+        @keyframes modal-pop {
+          from {
+            opacity: 0;
+            transform: scale(0.88) translateY(40px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          20%, 60% { transform: translateX(-6px); }
+          40%, 80% { transform: translateX(6px); }
+        }
+
+        @keyframes success-pop {
+          0% { transform: scale(0.8); opacity: 0; }
+          50% { transform: scale(1.15); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+
+        .animate-modal-pop {
+          animation: modal-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .animate-fade-in {
+          animation: fade-in 0.4s ease-out forwards;
+        }
+
+        .animate-shake {
+          animation: shake 0.4s ease-in-out;
+        }
+
+        .animate-success-pop {
+          animation: success-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+      `}</style>
     </div>
   );
 }

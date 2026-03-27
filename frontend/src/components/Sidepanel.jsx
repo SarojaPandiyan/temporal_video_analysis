@@ -1,23 +1,63 @@
-import { useState, useEffect, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
 import { FiSidebar, FiSettings } from "react-icons/fi";
 import { RiEdit2Line } from "react-icons/ri";
 import { FaSearch } from "react-icons/fa";
-import { useAuth } from "../context/AuthContext";
 import { FiTrash2 } from "react-icons/fi";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const SidePanel = ({ isDark, searchVisible }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [chatSessions, setChatSessions] = useState([]);
-  const [loading, setLoading] = useState(true); // ← NEW: loading state
-  const [fetchError, setFetchError] = useState(null); // ← optional: error state
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
+  const [deletingId, setDeletingId] = useState(null); // For delete animation
+  const [newSessionId, setNewSessionId] = useState(null); // For new entry bounce
+
   const { getAccessToken } = useAuth();
   const navigate = useNavigate();
+  const panelRef = useRef(null);
+
+  // 3D tilt state
+  const [tiltStyle, setTiltStyle] = useState({
+    transform: "perspective(1200px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)",
+  });
 
   const bg = isDark ? "bg-neutral-950" : "bg-white";
   const text = isDark ? "text-neutral-200" : "text-neutral-800";
   const border = isDark ? "border-neutral-800" : "border-neutral-200";
-  const hover = isDark ? "hover:bg-neutral-900/60" : "hover:bg-neutral-100";
+  const hover = isDark ? "hover:bg-neutral-900/70" : "hover:bg-neutral-100";
+
+  // 3D mouse tilt effect
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+
+    const handleMouseMove = (e) => {
+      const rect = panel.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      
+      const rotateY = x * 12;
+      
+      setTiltStyle({
+        transform: `perspective(1200px) rotateX(${rotateX}deg) scale3d(1.015, 1.015, 1.015)`,
+      });
+    };
+
+    const handleMouseLeave = () => {
+      setTiltStyle({
+        transform: "perspective(1200px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)",
+      });
+    };
+
+    panel.addEventListener("mousemove", handleMouseMove);
+    panel.addEventListener("mouseleave", handleMouseLeave);
+
+    return () => {
+      panel.removeEventListener("mousemove", handleMouseMove);
+      panel.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -31,22 +71,26 @@ const SidePanel = ({ isDark, searchVisible }) => {
           return;
         }
 
-        const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/chat/fetch-history`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json", // optional but good practice
-            },
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/chat/fetch-history`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
-        );
-        if (!res.ok) {
-          throw new Error("Failed to load chat history");
-        }
+        });
+
+        if (!res.ok) throw new Error("Failed to load chat history");
 
         const data = await res.json();
-        // console.log("Fetched chat sessions:", data.chat_sessions);
-        setChatSessions(data.chat_sessions || []);
+        const newSessions = data.chat_sessions || [];
+
+        // Detect new sessions for bounce animation
+        if (newSessions.length > chatSessions.length) {
+          const latestSession = newSessions[0];
+          if (latestSession) setNewSessionId(latestSession.session_id);
+          setTimeout(() => setNewSessionId(null), 1200);
+        }
+
+        setChatSessions(newSessions);
       } catch (err) {
         console.error("Chat history fetch error:", err);
         setFetchError("Couldn't load chats");
@@ -56,9 +100,8 @@ const SidePanel = ({ isDark, searchVisible }) => {
     };
 
     fetchHistory();
-  }, [isExpanded, getAccessToken]); // Refetch when panel is expanded or access token changes
+  }, [isExpanded, getAccessToken]);
 
-  // Group sessions by recency
   const groupSessions = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -69,28 +112,18 @@ const SidePanel = ({ isDark, searchVisible }) => {
     const weekAgo = new Date(today);
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    const groups = {
-      today: [],
-      yesterday: [],
-      previous7days: [],
-      older: [],
-    };
+    const groups = { today: [], yesterday: [], previous7days: [], older: [] };
 
     chatSessions.forEach((session) => {
       const updated = new Date(session.updated_at);
       updated.setHours(0, 0, 0, 0);
 
-      if (updated.getTime() === today.getTime()) {
-        groups.today.push(session);
-      } else if (updated.getTime() === yesterday.getTime()) {
-        groups.yesterday.push(session);
-      } else if (updated >= weekAgo) {
-        groups.previous7days.push(session);
-      } else {
-        groups.older.push(session);
-      }
+      if (updated.getTime() === today.getTime()) groups.today.push(session);
+      else if (updated.getTime() === yesterday.getTime()) groups.yesterday.push(session);
+      else if (updated >= weekAgo) groups.previous7days.push(session);
+      else groups.older.push(session);
     });
-    // console.log(groups);
+
     return groups;
   };
 
@@ -103,6 +136,8 @@ const SidePanel = ({ isDark, searchVisible }) => {
   const deleteSession = async (sessionId) => {
     if (!window.confirm("Are you sure you want to delete this chat?")) return;
 
+    setDeletingId(sessionId);
+
     try {
       const res = await fetch(
         `${import.meta.env.VITE_API_URL}/chat/delete-messages/${sessionId}`,
@@ -110,252 +145,163 @@ const SidePanel = ({ isDark, searchVisible }) => {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${getAccessToken()}`,
-            "Content-Type": "application/json",
           },
-        },
+        }
       );
 
-      if (!res.ok) {
-        throw new Error("Failed to delete chat session");
-      }
-      // Remove deleted session from state
-      setChatSessions((prev) => prev.filter((s) => s.session_id !== sessionId));
-      if (window.location.pathname === `/chat/${sessionId}`) {
-        navigate("/chat"); // Redirect to new chat if currently viewing deleted session
-      }
+      if (!res.ok) throw new Error("Failed to delete");
+
+      // Remove with delay to allow animation
+      setTimeout(() => {
+        setChatSessions((prev) => prev.filter((s) => s.session_id !== sessionId));
+        setDeletingId(null);
+
+        if (window.location.pathname === `/chat/${sessionId}`) {
+          navigate("/chat");
+        }
+      }, 400);
     } catch (err) {
-      console.error("Delete session error:", err);
+      console.error("Delete error:", err);
       alert("Couldn't delete chat session");
+      setDeletingId(null);
     }
   };
 
   return (
     <div
+      ref={panelRef}
+      style={tiltStyle}
       className={`
-        h-screen flex flex-col
-        transition-all duration-300 ease-in-out
-        ${isExpanded ? "w-64" : "w-16"}
-        ${bg} ${text} ${border} border-r overflow-hidden
+        h-screen flex flex-col transition-all duration-300 ease-out
+        ${isExpanded ? "w-72" : "w-16"}
+        ${bg} ${text} ${border} border-r overflow-hidden relative
+        shadow-2xl
       `}
     >
       <div className="flex-1 flex flex-col pt-4 overflow-hidden">
-        {/* Toggle */}
+        {/* Toggle Button */}
         <div
-          className={`flex items-center gap-3 px-4 py-3 cursor-pointer ${hover} transition-colors`}
+          className={`flex items-center gap-3 px-4 py-3 cursor-pointer ${hover} transition-all active:scale-95 rounded-xl mx-2`}
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <FiSidebar className="shrink-0" />
-          {isExpanded && <span className="text-sm font-semibold">Menu</span>}
+          <FiSidebar className="shrink-0 text-xl" />
+          {isExpanded && <span className="text-sm font-semibold tracking-tight">InsightSphere</span>}
         </div>
 
         {/* Search & New Chat */}
         {isExpanded && (
-          <div className="mt-4 px-3 flex flex-col gap-2">
+          <div className="mt-6 px-3 flex flex-col gap-1.5">
             <div
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer ${hover}`}
+              className={`flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer ${hover} transition-all active:scale-[0.97]`}
               onClick={searchVisible}
             >
               <FaSearch className="shrink-0" />
-              <span className="text-sm font-medium">Search</span>
+              <span className="text-sm font-medium">Search Chats</span>
             </div>
 
             <div
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer ${hover}`}
+              className={`flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer ${hover} transition-all active:scale-[0.97]`}
+              onClick={() => navigate("/chat")}
             >
               <RiEdit2Line className="shrink-0" />
-              <span
-                className="text-sm font-medium"
-                onClick={() => navigate("/chat")}
-              >
-                New Chat
-              </span>
+              <span className="text-sm font-medium">New Analysis</span>
             </div>
           </div>
         )}
 
-        {/* Chat History Section */}
+        {/* Chat History */}
         {isExpanded && (
-          <div className="mt-6 flex-1 overflow-y-auto px-2">
-            <h3 className="px-3 mb-2 text-xl font-semibold opacity-70">
-              Chats
-            </h3>
+          <div className="mt-8 flex-1 overflow-y-auto px-3 custom-scroll">
+            <h3 className="px-4 mb-3 text-lg font-semibold tracking-tight opacity-80">Recent Analyses</h3>
 
-            {/* Loading State */}
             {loading && (
-              <div className="px-4 py-6 text-center text-sm opacity-70 flex flex-col items-center gap-2">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current"></div>
-                <span>Loading chats...</span>
+              <div className="px-4 py-8 text-center opacity-70 flex flex-col items-center gap-3">
+                <div className="animate-spin h-6 w-6 border-2 border-current border-t-transparent rounded-full" />
+                <span className="text-sm">Loading history...</span>
               </div>
             )}
 
-            {/* Error State */}
             {!loading && fetchError && (
-              <div className="px-4 py-6 text-center text-sm text-red-400">
-                {fetchError}
-              </div>
+              <div className="px-4 py-8 text-center text-red-400 text-sm">{fetchError}</div>
             )}
 
-            {/* No chats */}
             {!loading && !fetchError && chatSessions.length === 0 && (
-              <div className="px-4 py-6 text-center text-sm opacity-70">
-                No chats yet.
-                <br />
-                Start a new conversation!
+              <div className="px-4 py-12 text-center opacity-60 text-sm">
+                No analyses yet.<br />Start a new conversation.
               </div>
             )}
 
-            {/* Grouped Chats */}
             {!loading && !fetchError && chatSessions.length > 0 && (
               <>
-                {/* Today */}
-                {groups.today.length > 0 && (
-                  <div>
-                    <p className="px-3 mb-1 text-xs opacity-60">Today</p>
-                    {groups.today.map((session) => (
-                      <div
-                        key={session.session_id}
-                        onClick={() => handleChatClick(session)}
-                        className={`
-                        group flex items-center justify-between
-                        px-3 py-2.5 rounded-lg cursor-pointer text-sm
-                        ${hover} transition-colors
-                      `}
-                      >
-                        <span className="truncate">
-                          {session.title || "Untitled Chat"}
-                        </span>
+                {["today", "yesterday", "previous7days", "older"].map((groupKey) => {
+                  const group = groups[groupKey];
+                  if (group.length === 0) return null;
 
-                        {/* Dustbin icon - visible only on hover */}
-                        <FiTrash2
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            console.log("Delete session:", session.session_id);
-                            deleteSession(session.session_id);
-                          }}
-                          className="
-                          opacity-0 group-hover:opacity-100
-                          transition-opacity duration-150
-                          text-red-500 hover:text-red-600
-                          shrink-0
-                        "
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
+                  const labels = {
+                    today: "Today",
+                    yesterday: "Yesterday",
+                    previous7days: "Previous 7 days",
+                    older: "Older",
+                  };
 
-                {/* Yesterday */}
-                {groups.yesterday.length > 0 && (
-                  <div className="mt-4">
-                    <p className="px-3 mb-1 text-xs opacity-60">Yesterday</p>
-                    {groups.yesterday.map((session) => (
-                      <div
-                        key={session.session_id}
-                        onClick={() => handleChatClick(session)}
-                        className={`
-                          group flex items-center justify-between
-                          px-3 py-2.5 rounded-lg cursor-pointer text-sl
-                          ${hover} transition-colors
-                        `}
-                      >
-                        <span className="truncate">
-                          {session.title || "Untitled Chat"}
-                        </span>
+                  return (
+                    <div key={groupKey} className="mb-6">
+                      <p className="px-4 mb-2 text-xs opacity-60 font-medium tracking-widest">
+                        {labels[groupKey]}
+                      </p>
+                      {group.map((session) => {
+                        const isDeleting = deletingId === session.session_id;
+                        const isNew = newSessionId === session.session_id;
 
-                        {/* Dustbin icon - visible only on hover */}
-                        <FiTrash2
-                          onClick={(e) => {
-                            e.stopPropagation(); // prevent navigation
-                            console.log("Delete session:", session.session_id);
-                            deleteSession(session.session_id);
-                          }}
-                          className="
-                            opacity-0 group-hover:opacity-100
-                            transition-opacity duration-150
-                            text-red-500 hover:text-red-600
-                            shrink-0
-                          "
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
+                        return (
+                          <div
+                            key={session.session_id}
+                            onClick={() => !isDeleting && handleChatClick(session)}
+                            className={`
+                              group relative flex items-center justify-between
+                              px-4 py-3.5 mb-1 rounded-2xl cursor-pointer text-sm
+                              ${hover} transition-all duration-200
+                              ${isDeleting ? "opacity-40 pointer-events-none" : ""}
+                              ${isNew ? "animate-bounce-in" : ""}
+                            `}
+                          >
+                            <span className="truncate pr-8 font-medium">
+                              {session.title || "Untitled Analysis"}
+                            </span>
 
-                {/* Previous 7 Days */}
-                {groups.previous7days.length > 0 && (
-                  <div className="mt-4">
-                    <p className="px-3 mb-1 text-xs opacity-60">
-                      Previous 7 days
-                    </p>
-                    {groups.previous7days.map((session) => (
-                      <div
-                        key={session.session_id}
-                        onClick={() => handleChatClick(session)}
-                        className={`
-                          group flex items-center justify-between
-                          px-3 py-2.5 rounded-lg cursor-pointer text-sm
-                          ${hover} transition-colors
-                        `}
-                      >
-                        <span className="truncate">
-                          {session.title || "Untitled Chat"}
-                        </span>
+                            {/* Delete Button with Bubble Burst Animation */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteSession(session.session_id);
+                              }}
+                              className="absolute right-3 opacity-0 group-hover:opacity-100 transition-all p-1.5 hover:bg-red-500/10 rounded-lg"
+                            >
+                              <FiTrash2 className="text-red-500 hover:text-red-600 transition-colors" />
+                            </button>
 
-                        {/* Dustbin icon - visible only on hover */}
-                        <FiTrash2
-                          onClick={(e) => {
-                            e.stopPropagation(); // prevent navigation
-                            console.log("Delete session:", session.session_id);
-                            deleteSession(session.session_id);
-                          }}
-                          className="
-                            opacity-0 group-hover:opacity-100
-                            transition-opacity duration-150
-                            text-red-500 hover:text-red-600
-                            shrink-0
-                          "
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Older */}
-                {groups.older.length > 0 && (
-                  <div className="mt-4">
-                    <p className="px-3 mb-1 text-xs opacity-60">Older</p>
-                    {groups.older.map((session) => (
-                      <div
-                        key={session.session_id}
-                        onClick={() => handleChatClick(session)}
-                        className={`
-                        group flex items-center justify-between
-                        px-3 py-2.5 rounded-lg cursor-pointer text-sm
-                        ${hover} transition-colors
-                      `}
-                      >
-                        <span className="truncate">
-                          {session.title || "Untitled Chat"}
-                        </span>
-
-                        {/* Dustbin icon - visible only on hover */}
-                        <FiTrash2
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            console.log("Delete session:", session.session_id);
-                            deleteSession(session.session_id);
-                          }}
-                          className="
-                          opacity-0 group-hover:opacity-100
-                          transition-opacity duration-150
-                          text-red-500 hover:text-red-600
-                          shrink-0
-                        "
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
+                            {/* Bubble Burst Effect */}
+                            {isDeleting && (
+                              <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
+                                {[...Array(8)].map((_, i) => (
+                                  <div
+                                    key={i}
+                                    className="absolute w-2 h-2 bg-red-500 rounded-full animate-bubble-burst"
+                                    style={{
+                                      left: `${30 + Math.random() * 40}%`,
+                                      top: `${30 + Math.random() * 40}%`,
+                                      animationDelay: `${i * 40}ms`,
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
               </>
             )}
           </div>
@@ -365,12 +311,51 @@ const SidePanel = ({ isDark, searchVisible }) => {
       {/* Bottom Settings */}
       <div className="px-3 pb-6">
         <div
-          className={`flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer ${hover} transition-colors`}
+          className={`flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer ${hover} transition-all active:scale-[0.97]`}
         >
           <FiSettings className="shrink-0" />
           {isExpanded && <span className="text-sm font-medium">Settings</span>}
         </div>
       </div>
+
+      {/* Custom Animations */}
+      <style jsx>{`
+        @keyframes bounce-in {
+          0% { opacity: 0; transform: scale(0.6) translateY(20px); }
+          60% { transform: scale(1.15) translateY(-8px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes bubble-burst {
+          0% {
+            transform: scale(0.2) translate(0, 0);
+            opacity: 0.9;
+          }
+          40% {
+            transform: scale(1.6);
+          }
+          100% {
+            transform: scale(0) translate(var(--x), var(--y));
+            opacity: 0;
+          }
+        }
+
+        .animate-bounce-in {
+          animation: bounce-in 620ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .animate-bubble-burst {
+          animation: bubble-burst 420ms ease-out forwards;
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+          width: 5px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+          background: ${isDark ? "#4b5563" : "#d1d5db"};
+          border-radius: 20px;
+        }
+      `}</style>
     </div>
   );
 };
