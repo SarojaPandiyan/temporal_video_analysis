@@ -1,39 +1,48 @@
-# from pymongo import MongoClient
+# utils/mongo_utils.py
+"""
+MongoDB helpers for the CCTV analytics engine.
 
-# client = MongoClient("mongodb://localhost:27017/") 
-# db = client["video_analytics"]
-# collection = db["events"]
+Collections
+-----------
+events – individual camera events (entry, exit, long_stay, stationary, resumed_moving)
+"""
 
-# def save_event(event):
-#     collection.insert_one(event)
-# # ------------------------
+import logging
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError
-import logging
 
 logger = logging.getLogger(__name__)
 
 _client = None
-_collection = None
+_events = None
 
 
 def _get_collection():
-    """Lazy-init MongoDB connection so import never crashes the app."""
-    global _client, _collection
-    if _collection is None:
+    """Lazy-init MongoDB connection; returns events collection."""
+    global _client, _events
+    if _events is None:
         _client = MongoClient(
             "mongodb://localhost:27017/",
-            serverSelectionTimeoutMS=3000,  # fail fast if Mongo is down
+            serverSelectionTimeoutMS=3000,
         )
-        db = _client["video_analytics"]
-        _collection = db["events"]
-    return _collection
+        db      = _client["video_analytics"]
+        _events = db["events"]
+
+        try:
+            _events.create_index([("camera_id", 1), ("event", 1)])
+            _events.create_index([("local_id", 1)])
+        except PyMongoError:
+            pass   # indexes are a nice-to-have
+
+    return _events
 
 
-def save_event(event):
-    """Insert an event document. Logs and continues on failure."""
+# ── events ────────────────────────────────────────────────────────────────
+
+def save_event(event: dict):
+    """Insert a single event document.  Logs and continues on failure."""
     try:
-        _get_collection().insert_one(event)
-    except PyMongoError as e:
-        logger.error("MongoDB save_event failed: %s", e)
-
+        col = _get_collection()
+        col.insert_one(event)
+    except PyMongoError as exc:
+        logger.error("save_event failed: %s", exc)
